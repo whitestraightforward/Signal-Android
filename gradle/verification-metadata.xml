@@ -17,6 +17,15 @@ https://docs.gradle.org/current/userguide/dependency_verification.html
          <trust file=".*-javadoc[.]jar" regex="true"/>
          <trust file=".*-sources[.]jar" regex="true"/>
          <trust file=".*[.]pom" regex="true"/>
+         <!--
+           The Kotlin DSL plugin marker is resolved during IDE sync before any
+           updateVerificationMetadata task can run. Gradle 9.3.x requests 6.4.2;
+           the wrapper (9.4.1) requests 6.5.2. Trust official Gradle Kotlin
+           plugin artifacts so Android Studio sync is not blocked by a missing
+           checksum for the plugin marker POM/JAR.
+         -->
+         <trust group="org.gradle.kotlin"/>
+         <trust group="org.gradle.kotlin.kotlin-dsl"/>
       </trusted-artifacts>
    </configuration>
    <components>
