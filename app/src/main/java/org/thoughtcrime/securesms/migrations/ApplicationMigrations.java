@@ -205,9 +205,16 @@ public class ApplicationMigrations {
     static final int SVR2_ENCLAVE_UPDATE_6         = 161;
     static final int NOTIFICATION_INDEX_MIGRATION  = 162;
     static final int NOTIFICATION_STATE_CLEANUP    = 163;
+    static final int KT_USERNAME_CAPABILITY        = 164;
+    static final int FIX_CHANGE_NUMBER_ERROR_2     = 165;
+    static final int LOCAL_ARCHIVE_RECONCILE       = 166;
+//    static final int GROUP_DELETED_AT_BACKFILL     = 167;
+    static final int STICKER_PACK_STORAGE_SYNC     = 168;
+    static final int GROUP_DELETED_AT_BACKFILL     = 169;
+    static final int KT_RESET_FAILURE              = 170;
   }
 
-  public static final int CURRENT_VERSION = 163;
+  public static final int CURRENT_VERSION = 170;
 
   /**
    * This *must* be called after the {@link JobManager} has been instantiated, but *before* the call
@@ -846,6 +853,10 @@ public class ApplicationMigrations {
       jobs.put(Version.FIX_CHANGE_NUMBER_ERROR, new FixChangeNumberErrorMigrationJob());
     }
 
+    if (lastSeenVersion < Version.FIX_CHANGE_NUMBER_ERROR_2) {
+      jobs.put(Version.FIX_CHANGE_NUMBER_ERROR_2, new FixChangeNumberErrorMigrationJob());
+    }
+
     if (lastSeenVersion < Version.CHAT_FOLDER_STORAGE_SYNC) {
       jobs.put(Version.CHAT_FOLDER_STORAGE_SYNC, new SyncChatFoldersMigrationJob());
     }
@@ -948,6 +959,30 @@ public class ApplicationMigrations {
 
     if (lastSeenVersion < Version.NOTIFICATION_STATE_CLEANUP) {
       jobs.put(Version.NOTIFICATION_STATE_CLEANUP, new BackfillNotifiedStateMigrationJob());
+    }
+
+    if (lastSeenVersion < Version.KT_USERNAME_CAPABILITY) {
+      jobs.put(Version.KT_USERNAME_CAPABILITY, new KeyTransparencyUsernameMigrationJob());
+    }
+
+    if (lastSeenVersion < Version.LOCAL_ARCHIVE_RECONCILE) {
+      jobs.put(Version.LOCAL_ARCHIVE_RECONCILE, new LocalArchiveReconciliationMigrationJob());
+    }
+
+//    if (lastSeenVersion < Version.GROUP_DELETED_AT_BACKFILL) {
+//      jobs.put(Version.GROUP_DELETED_AT_BACKFILL, new GroupDeletedBackfillMigrationJob());
+//    }
+
+    if (lastSeenVersion < Version.STICKER_PACK_STORAGE_SYNC) {
+      jobs.put(Version.STICKER_PACK_STORAGE_SYNC, new SyncStickerPacksMigrationJob());
+    }
+
+    if (lastSeenVersion < Version.GROUP_DELETED_AT_BACKFILL) {
+      jobs.put(Version.GROUP_DELETED_AT_BACKFILL, new GroupDeletedBackfillMigrationJob());
+    }
+
+    if (lastSeenVersion < Version.KT_RESET_FAILURE) {
+      jobs.put(Version.KT_RESET_FAILURE, new KeyTransparencyFailureMigrationJob());
     }
 
     return jobs;

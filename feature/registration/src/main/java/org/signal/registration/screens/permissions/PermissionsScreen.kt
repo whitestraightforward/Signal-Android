@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
@@ -164,7 +165,7 @@ private fun TwoPaneLayout(
       ) {
         Text(
           text = stringResource(id = R.string.GrantPermissionsFragment__allow_permissions),
-          style = MaterialTheme.typography.headlineMedium,
+          style = MaterialTheme.typography.headlineLarge,
           modifier = Modifier
             .fillMaxWidth()
             .attachDebugLogHelper()
@@ -172,7 +173,7 @@ private fun TwoPaneLayout(
 
         Text(
           text = stringResource(id = R.string.GrantPermissionsFragment__to_help_you_message_people_you_know),
-          style = MaterialTheme.typography.bodyLarge,
+          style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Normal),
           color = MaterialTheme.colorScheme.onSurfaceVariant,
           modifier = Modifier.padding(top = 16.dp)
         )
@@ -218,20 +219,20 @@ private fun PermissionList(permissions: List<String>) {
     )
   }
 
-//  if (permissions.any {
-//      it == Manifest.permission.READ_EXTERNAL_STORAGE ||
-//        it == Manifest.permission.WRITE_EXTERNAL_STORAGE ||
-//        it == Manifest.permission.READ_MEDIA_IMAGES ||
-//        it == Manifest.permission.READ_MEDIA_VIDEO ||
-//        it == Manifest.permission.READ_MEDIA_AUDIO
-//    }
-//  ) {
-//    PermissionRow(
-//      imageVector = ImageVector.vectorResource(id = R.drawable.permission_file),
-//      title = stringResource(id = R.string.GrantPermissionsFragment__storage),
-//      subtitle = stringResource(id = R.string.GrantPermissionsFragment__send_photos_videos_and_files)
-//    )
-//  }
+  if (permissions.any {
+      it == Manifest.permission.READ_EXTERNAL_STORAGE ||
+        it == Manifest.permission.WRITE_EXTERNAL_STORAGE ||
+        it == Manifest.permission.READ_MEDIA_IMAGES ||
+        it == Manifest.permission.READ_MEDIA_VIDEO ||
+        it == Manifest.permission.READ_MEDIA_AUDIO
+    }
+  ) {
+    PermissionRow(
+      imageVector = ImageVector.vectorResource(id = R.drawable.permission_file),
+      title = stringResource(id = R.string.GrantPermissionsFragment__storage),
+      subtitle = stringResource(id = R.string.GrantPermissionsFragment__send_photos_videos_and_files)
+    )
+  }
 
   if (permissions.any { it == Manifest.permission.READ_PHONE_STATE || it == Manifest.permission.READ_PHONE_NUMBERS }) {
     PermissionRow(

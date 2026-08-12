@@ -4,7 +4,7 @@
   ~ SPDX-License-Identifier: AGPL-3.0-only
   -->
 <!-- smartling.instruction_comments_enabled = on -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
   <!-- Removed by excludeNonTranslatables <string name="app_name" translatable="false">Signal</string> -->
 
   <!-- Removed by excludeNonTranslatables <string name="install_url" translatable="false">https://signal.org/install</string> -->
@@ -273,62 +273,6 @@
     <!-- Unknown people row info dialog action to close the dialog -->
     <string name="CallInfoView__got_it">Εντάξει</string>
 
-    <!-- CameraFragment -->
-    <!-- Toasted when user device does not support video recording -->
-    <string name="CameraFragment__video_recording_is_not_supported_on_your_device">Η εγγραφή βίντεο δεν υποστηρίζεται στη συσκευή σας</string>
-
-    <!-- CameraXFragment -->
-    <string name="CameraXFragment_tap_for_photo_hold_for_video">Πάτα για φωτογραφία, παρατεταμένα για βίντεο</string>
-    <!-- Accessibility content description to describe the capture button when taking an image/video -->
-    <string name="CameraXFragment_capture_description">Λήψη</string>
-    <string name="CameraXFragment_change_camera_description">Αλλαγή κάμερας</string>
-    <string name="CameraXFragment_open_gallery_description">Άνοιγμα συλλογής</string>
-    <!-- Button text asking for access to camera permissions -->
-    <string name="CameraXFragment_allow_access">Να δοθεί πρόσβαση</string>
-    <!-- Dialog title asking users for camera and microphone permission -->
-    <string name="CameraXFragment_allow_access_camera_microphone">Να δοθεί πρόσβαση στην κάμερα και στο μικρόφωνο</string>
-    <!-- Dialog title asking users for camera permission -->
-    <string name="CameraXFragment_allow_access_camera">Να δοθεί πρόσβαση στην κάμερα</string>
-    <!-- Dialog title asking users for microphone permission -->
-    <string name="CameraXFragment_allow_access_microphone">Να δοθεί πρόσβαση στο μικρόφωνο</string>
-    <!-- Text explaining why Signal needs camera access in order to take photos -->
-    <string name="CameraXFragment_to_capture_photos_allow_camera">Για να τραβήξεις φωτογραφίες, δώσε στο Signal πρόσβαση στην κάμερα.</string>
-    <!-- Text explaining why Signal needs camera access in order to take photos and videos -->
-    <string name="CameraXFragment_to_capture_photos_and_video_allow_camera">Για να τραβήξεις φωτογραφίες και βίντεο, δώσε στο Signal πρόσβαση στην κάμερα.</string>
-    <!-- Text explaining why Signal needs camera and microphone access in order to take photos and videos -->
-    <string name="CameraXFragment_to_capture_photos_and_video_allow_camera_microphone">Για να τραβήξεις φωτογραφίες και βίντεο, δώσε στο Signal πρόσβαση στην κάμερα και στο μικρόφωνο.</string>
-    <!-- Text explaining why Signal needs microphone access to take videos -->
-    <string name="CameraXFragment_to_capture_videos_with_sound">Για να τραβήξεις βίντεο με ήχο, δώσε στο Signal πρόσβαση στο μικρόφωνο.</string>
-    <!-- Text explaining why Signal needs camera access to scan QR codes -->
-    <string name="CameraXFragment_to_scan_qr_code_allow_camera">Για να σαρώσεις έναν κωδικό QR, δώσε στο Signal πρόσβαση στην κάμερά.</string>
-    <!-- Toast dialog explaining why Signal needs camera permissions when capturing photos -->
-    <string name="CameraXFragment_signal_needs_camera_access_capture_photos">Το Signal χρειάζεται πρόσβαση στην κάμερα για τη λήψη φωτογραφιών</string>
-    <!-- Toast dialog explaining why Signal needs camera permissions when scanning QR codes -->
-    <string name="CameraXFragment_signal_needs_camera_access_scan_qr_code">Το Signal χρειάζεται πρόσβαση στην κάμερα για τη σάρωση κωδικών QR</string>
-    <!-- Toast dialog explaining why Signal needs microphone permissions -->
-    <string name="CameraXFragment_signal_needs_microphone_access_video">Το Signal χρειάζεται πρόσβαση στο μικρόφωνο για τη λήψη βίντεο</string>
-    <!-- Dialog description that explains the steps needed to give camera permission -->
-    <string name="CameraXFragment_to_capture_photos">Για τη λήψη φωτογραφιών στο Signal:</string>
-    <!-- Dialog description that explains the steps needed to give camera and microphone permission -->
-    <string name="CameraXFragment_to_capture_photos_videos">Για τη λήψη φωτογραφιών και βίντεο στο Signal:</string>
-    <!-- Dialog description that explains the steps needed to give microphone permission -->
-    <string name="CameraXFragment_to_capture_videos">Για τη λήψη βίντεο με ήχο:</string>
-    <!-- Dialog description that explains the steps needed to give Signal camera permissions -->
-    <string name="CameraXFragment_to_scan_qr_codes">Για τη σάρωση κωδικών QR:</string>
-    <!-- Error message shown when we try to take a photo, but fail -->
-    <string name="CameraXFragment_photo_capture_failed">Αποτυχία λήψης φωτογραφίας. Δοκίμασε ξανά.</string>
-    <!-- Error message shown when we try to take a photo, but fail when trying to process it (convert it into something the user can see). -->
-    <string name="CameraXFragment_photo_processing_failed">Αποτυχία επεξεργασίας φωτογραφίας. Δοκίμασε ξανά.</string>
-    <!-- Accessibility label for the switch camera button -->
-    <string name="CameraXFragment_switch_camera">Εναλλαγή κάμερας</string>
-    <!-- Accessibility label for flash button when flash is off -->
-    <string name="CameraXFragment_flash_off">Φλας απενεργοποιημένο</string>
-    <!-- Accessibility label for flash button when flash is on -->
-    <string name="CameraXFragment_flash_on">Φλας ενεργοποιημένο</string>
-    <!-- Accessibility label for flash button when flash is set to auto -->
-    <string name="CameraXFragment_flash_auto">Αυτόματο φλας</string>
-    <!-- Accessibility label for the send button in media selection -->
-    <string name="CameraXFragment_send">Αποστολή</string>
 
     <string name="CameraContacts__menu_search">Αναζήτηση</string>
 
@@ -349,6 +293,16 @@
     <string name="ClientDeprecatedActivity_dont_update">Να μην αναβαθμιστεί</string>
     <string name="ClientDeprecatedActivity_warning">Προσοχή</string>
     <string name="ClientDeprecatedActivity_your_version_of_signal_has_expired_you_can_view_your_message_history">Η έκδοση του Signal έχει λήξει. Μπορείς να δεις το ιστορικό μηνυμάτων αλλά δεν θα μπορείς να στέλνεις ή να λαμβάνεις μηνύματα μέχρι να κάνεις αναβάθμιση.</string>
+
+    <!-- ClockSkewActivity -->
+    <!-- Title of the full-screen dialog shown when the device clock is too far off from the real time -->
+    <string name="ClockSkewActivity__title">Η ημερομηνία δεν είναι ακριβής</string>
+    <!-- Body text explaining that the device clock is wrong and needs to be fixed -->
+    <string name="ClockSkewActivity__date_inaccurate_description">Η ημερομηνία της συσκευής σου δεν είναι ακριβής.\nΡύθμισε το ρολόι σου και δοκίμασε ξανά.</string>
+    <!-- Shows the user the current, inaccurate date and time reported by their device. Placeholder is the formatted date, time, and time zone. -->
+    <string name="ClockSkewActivity__time_prefix">Η ημερομηνία και η ώρα της συσκευής σου είναι:\n%1$s</string>
+    <!-- Button that opens the system date and time settings -->
+    <string name="ClockSkewActivity__adjust_date_button">Ρύθμιση ημερομηνίας</string>
 
     <!-- CommunicationActions -->
     <string name="CommunicationActions_no_browser_found">Δεν βρέθηκε περιηγητής.</string>
@@ -444,6 +398,8 @@
     <!-- Conversation message shown when someone deletes their own message. Placeholder is the name of the person. -->
     <string name="ConversationItem_s_deleted_this_message">Ο χρήστης %1$s διέγραψε αυτό το μήνυμα</string>
     <string name="ConversationItem_you_deleted_this_message">Διέγραψες αυτό το μήνυμα</string>
+    <!-- Tappable text shown on a locally-deleted message tombstone, prompting the user to promote it to a delete-for-everyone -->
+    <string name="ConversationItem_delete_for_everyone_question">Διαγραφή για όλους;</string>
     <!-- Conversation message when a message has been deleted by an admin. The placeholder is the admin\'s name. -->
     <string name="ConversationItem_admin_s_deleted_this_message">Ο διαχειριστής %1$s διέγραψε αυτό το μήνυμα</string>
     <!-- Dialog error message shown when user can\'t download a message from someone else due to a permanent failure (e.g., unable to decrypt), placeholder is other\'s name -->
@@ -530,7 +486,6 @@
     <string name="ConversationActivity_signal_needs_the_camera_permission_to_take_photos_or_video">Το Signal χρειάζεται τα δικαιώματα κάμερας για τη λήψη φωτογραφίων και βίντεο, αλλά αυτά δεν έχουν δοθεί μόνιμα. Πήγαινε στις ρυθμίσεις εφαρμογών, επέλεξε τα «Δικαιώματα», και ενεργοποίησε την «Κάμερα».</string>
     <string name="ConversationActivity_signal_needs_camera_permissions_to_take_photos_or_video">Το Signal χρειάζεται τα δικαιώματα κάμερας για λήψη φωτογραφιών ή βίντεο</string>
     <string name="ConversationActivity_enable_the_microphone_permission_to_capture_videos_with_sound">Ενεργοποίησε την άδεια μικροφώνου για λήψη βίντεο με ήχο.</string>
-    <string name="ConversationActivity_signal_needs_the_recording_permissions_to_capture_video">Το Signal χρειάζεται τα δικαιώματα μικροφώνου για τη λήψη βίντεο , αλλά αυτά δεν έχουν δοθεί. Πήγαινε στις ρυθμίσεις εφαρμογών, επίλεξε τα «Δικαιώματα», και ενεργοποίησε το «Μικρόφωνο» και την «Κάμερα».</string>
     <string name="ConversationActivity_signal_needs_recording_permissions_to_capture_video">Το Signal χρειάζεται τα δικαιώματα μικροφώνου για να τραβήξει βίντεο.</string>
 
     <string name="ConversationActivity_quoted_contact_message">%1$s %2$s</string>
@@ -636,7 +591,7 @@
     <string name="ConversationFragment_delete">Διαγραφή</string>
     <!-- Dialog button for deleting one or more note-to-self messages on all linked devices. -->
     <string name="ConversationFragment_delete_everywhere">Διαγραφή από όλες τις συσκευές</string>
-    <string name="ConversationFragment_this_message_will_be_deleted_for_everyone_in_the_conversation">Αυτό το μήνυμα θα διαγραφεί για όλα τα άτομα στη συνομιλία, αν έχουν μια πρόσφατη έκδοση του Signal. Θα μπορούν να δουν ότι διέγραψες ένα μήνυμα.</string>
+    <string name="ConversationFragment_this_message_will_be_deleted_for_everyone_in_the_conversation">Αυτό το μήνυμα θα διαγραφεί για όλους/ες στη συνομιλία. Θα μπορούν να δουν ότι διέγραψες το μήνυμα.</string>
     <string name="ConversationFragment_quoted_message_not_found">Το αρχικό μήνυμα δεν βρέθηκε</string>
     <string name="ConversationFragment_quoted_message_no_longer_available">Το αρχικό μήνυμα δεν είναι πια διαθέσιμο</string>
     <string name="ConversationFragment_failed_to_open_message">Αποτυχία ανοίγματος μηνύματος</string>
@@ -672,6 +627,8 @@
     <string name="ConversationFragment__update_build">Αναβάθμιση του Signal</string>
     <!-- Action shown to allow a user to re-register as they are no longer registered -->
     <string name="ConversationFragment__reregister_signal">Νέα εγγραφή στο Signal</string>
+    <!-- Action shown in the conversation input area to allow a user to re-link this device as it is no longer linked -->
+    <string name="ConversationFragment__relink_signal">Επανασύνδεση</string>
     <!-- Label for a button displayed in the conversation toolbar to return to the previous screen. -->
     <string name="ConversationFragment__content_description_back_button">Περιήγηση προς τα πίσω.</string>
     <!-- Label for a button displayed in the conversation toolbar to open the main screen of the app. -->
@@ -721,6 +678,12 @@
     <string name="ConversationFragment_group_names">Ονόματα ομάδας</string>
     <!-- Snackbar toast message shown when a profile cannot be downloaded and to try again. -->
     <string name="ConversationFragment_photo_failed">Η λήψη της φωτογραφίας απέτυχε. Ξαναπροσπάθησε.</string>
+    <!-- Title of the dialog shown when re-requesting an expired attachment from your primary device fails -->
+    <string name="ConversationFragment_attachment_backfill_failed_title">Δεν είναι δυνατή η λήψη πολυμέσων</string>
+    <!-- Body of the dialog shown when your phone didn\'t respond to a request to re-send an expired attachment -->
+    <string name="ConversationFragment_attachment_backfill_timeout">Έλεγξε τη συσκευή και τη σύνδεση του τηλεφώνου σου στο διαδίκτυο. Άνοιξε το Signal στο τηλέφωνό σου και, στη συνέχεια, δοκίμασε να το κατεβάσεις ξανά.</string>
+    <!-- Body of the dialog shown when your phone no longer has the attachment you tried to download -->
+    <string name="ConversationFragment_attachment_backfill_not_found">Αυτό το πολυμέσο δεν είναι πλέον διαθέσιμο στο τηλέφωνό σου και δεν είναι δυνατή η λήψη του.</string>
     <!-- Dialog for how to long to keep a messaged pinned for -->
     <string name="ConversationFragment__keep_pinned">Να μείνει καρφιτσωμένο για…</string>
     <!-- Dialog option to keep message pin for 24 hours -->
@@ -807,17 +770,28 @@
     <!-- Notice on chat list when no unread chats are available, centered on display -->
     <string name="ConversationListFragment__no_unread_chats">Καμία μη αναγνωσμένη συνομιλία</string>
     <plurals name="ConversationListFragment_delete_selected_conversations">
-        <item quantity="one">Διαγραφή επιλεγμένης συνομιλίας;</item>
-        <item quantity="other">Διαγραφή επιλεγμένων συνομιλιών;</item>
+        <item quantity="one">Διαγραφή ιστορικού μηνυμάτων;</item>
+        <item quantity="other">Διαγραφή ιστορικών μηνυμάτων;</item>
     </plurals>
+    <!-- Dialog message shown when deleting chats, none of which are groups -->
     <plurals name="ConversationListFragment_this_will_permanently_delete_all_n_selected_conversations">
-        <item quantity="one">Η επιλεγμένη συνομιλία θα διαγραφεί οριστικά.</item>
-        <item quantity="other">Και οι %1$d επιλεγμένες συνομιλίες θα διαγραφούν οριστικά.</item>
+        <item quantity="one">Όλα τα μηνύματα σε αυτή τη συνομιλία θα διαγραφούν.</item>
+        <item quantity="other">Όλα τα μηνύματα σε αυτές τις συνομιλίες θα διαγραφούν.</item>
     </plurals>
-    <!-- Dialog message shown when deleting one to many conversations from the chat list and the user has a linked device -->
+    <!-- Dialog message shown when deleting chats, with at least one group -->
+    <plurals name="ConversationListFragment_this_will_permanently_delete_all_n_selected_conversations_group">
+        <item quantity="one">Όλα τα μηνύματα σε αυτήν τη συνομιλία θα διαγραφούν. Θα εξακολουθείς να είσαι μέλος αυτής της ομάδας.</item>
+        <item quantity="other">Όλα τα μηνύματα σε αυτές τις συνομιλίες θα διαγραφούν. Θα εξακολουθείς να είσαι μέλος των ομάδων από τις οποίες δεν έχεις αποχωρήσει ακόμα.</item>
+    </plurals>
+    <!-- Dialog message shown when deleting chats, none of which are groups, and the user has a linked device -->
     <plurals name="ConversationListFragment_this_will_permanently_delete_all_n_selected_conversations_linked_device">
-        <item quantity="one">Αυτή η ενέργεια θα διαγράψει οριστικά και την επιλεγμένη συνομιλία από όλες σου τις συσκευές.</item>
-        <item quantity="other">Αυτή η ενέργεια θα διαγράψει οριστικά όλες τις %1$d επιλεγμένες συνομιλίες από όλες σου τις συσκευές.</item>
+        <item quantity="one">Όλα τα μηνύματα σε αυτήν τη συνομιλία θα διαγραφούν από όλες τις συσκευές.</item>
+        <item quantity="other">Όλα τα μηνύματα σε αυτές τις συνομιλίες θα διαγραφούν από όλες τις συσκευές.</item>
+    </plurals>
+    <!-- Dialog message shown when deleting chats with at least one group, and the user has a linked device -->
+    <plurals name="ConversationListFragment_this_will_permanently_delete_all_n_selected_conversations_linked_device_group">
+        <item quantity="one">Όλα τα μηνύματα σε αυτήν τη συνομιλία θα διαγραφούν από όλες τις συσκευές σου. Θα εξακολουθείς να είσαι μέλος αυτής της ομάδας.</item>
+        <item quantity="other">Όλα τα μηνύματα σε αυτές τις συνομιλίες θα διαγραφούν από όλες τις συσκευές σου. Θα εξακολουθείς να είσαι μέλος των ομάδων από τις οποίες δεν έχεις αποχωρήσει ακόμα.</item>
     </plurals>
     <string name="ConversationListFragment_deleting">Γίνεται διαγραφή</string>
     <plurals name="ConversationListFragment_deleting_selected_conversations">
@@ -1021,7 +995,6 @@
     <string name="CustomDefaultPreference_none">Κανένα</string>
 
     <!-- AvatarSelectionBottomSheetDialogFragment -->
-    <string name="AvatarSelectionBottomSheetDialogFragment__taking_a_photo_requires_the_camera_permission">Η λήψη φωτογραφίας απαιτεί την άδεια της κάμερας.</string>
     <string name="AvatarSelectionBottomSheetDialogFragment__viewing_your_gallery_requires_the_storage_permission">Η προβολή της συλλογής σου απαιτεί την άδεια αποθηκευτικού χώρου.</string>
 
     <!-- DateUtils -->
@@ -1096,7 +1069,7 @@
 
     <!-- LinkDeviceFragment -->
     <!-- Description for how Signal will work with a linked device (eg desktop, iPad) -->
-    <string name="LinkDeviceFragment__use_signal_on_desktop_ipad">Χρησιμοποίησε αυτόν τον λογαριασμό Signal σε υπολογιστή ή iPad.</string>
+    <string name="LinkDeviceFragment__use_signal_on_desktop_ipad">Use this Signal account on another device.</string>
     <!-- Button prompting users to link a new device to their account -->
     <string name="LinkDeviceFragment__link_a_new_device">Σύνδεση νέας συσκευής</string>
     <!-- Text explaining that on linked devices, messages will be encrypted where %s will be replaced with an image-->
@@ -1168,6 +1141,8 @@
     <string name="LinkDeviceFragment__edit_name">Επεξεργασία ονόματος</string>
     <!-- Toast shown when the process of linking a device has been cancelled -->
     <string name="LinkDeviceFragment__linking_cancelled">Η σύνδεση ακυρώθηκε</string>
+    <!-- Snackbar shown when the user tries to link a new device but has already reached the maximum number of linked devices. Placeholder is the maximum count. -->
+    <string name="LinkDeviceFragment__you_can_only_have_d_linked_devices">Μπορείς να έχεις μόνο %1$d συνδεδεμένες συσκευές.</string>
     <!-- Message shown in progress dialog telling users to avoid closing the app while messages are being synced -->
     <string name="LinkDeviceFragment__do_not_close">Μην κλείσεις την εφαρμογή</string>
     <!-- Dialog title shown when a device is unlinked -->
@@ -1502,6 +1477,12 @@
     <string name="AddGroupDetailsFragment__remove">Αφαίρεση</string>
     <string name="AddGroupDetailsFragment__sms_contact">Επαφή SMS</string>
     <string name="AddGroupDetailsFragment__remove_s_from_this_group">Αφαίρεση του/της %1$s από την ομάδα;</string>
+    <!-- Title of the dialog shown when tapping an existing group while creating a new group, confirming the user wants to leave and discard their in-progress group -->
+    <string name="AddGroupDetailsFragment__discard_group">Απόρριψη ομάδας;</string>
+    <!-- Body of the dialog shown when tapping an existing group while creating a new group. Placeholder is the name of the group being navigated to. -->
+    <string name="AddGroupDetailsFragment__if_you_continue_to_the_group_s_your_changes_wont_be_saved">Αν συνεχίσεις στην ομάδα «%1$s», οι αλλαγές σου δεν θα αποθηκευτούν.</string>
+    <!-- Label for the button that confirms discarding the in-progress group and navigating to an existing group -->
+    <string name="AddGroupDetailsFragment__discard">Απόρριψη</string>
     <!-- Info message shown in the middle of the screen, displayed when adding group details to an MMS Group -->
     <string name="AddGroupDetailsFragment__youve_selected_a_contact_that_doesnt_support">Έχεις επιλέξει μια επαφή που δεν υποστηρίζει ομάδες Signal, επομένως αυτή η ομάδα θα είναι MMS. Τα ονόματα και οι φωτογραφίες εξατομικευμένων ομάδων MMS θα είναι ορατά μόνο σε εσένα.</string>
     <!-- Info message shown in the middle of the screen, displayed when adding group details to an MMS Group after SMS Phase 0 -->
@@ -2931,6 +2912,8 @@
 
     <!-- Search -->
     <string name="SearchFragment_no_results">Δε βρέθηκαν αποτελέσματα για \"%1$s\"</string>
+    <!-- Text shown when no search results are found.   -->
+    <string name="SearchFragment_no_results_empty">Δε βρέθηκαν αποτελέσματα</string>
 
     <!-- ShakeToReport -->
   <!-- Removed by excludeNonTranslatables <string name="ShakeToReport_shake_detected" translatable="false">Shake detected</string> -->
@@ -3112,6 +3095,7 @@
   <!-- Removed by excludeNonTranslatables <string name="SupportEmailUtil_locale" translatable="false">Locale:</string> -->
   <!-- Removed by excludeNonTranslatables <string name="SupportEmailUtil_challenge_received" translatable="false">Challenge Received:</string> -->
   <!-- Removed by excludeNonTranslatables <string name="SupportEmailUtil_registered" translatable="false">Registered:</string> -->
+  <!-- Removed by excludeNonTranslatables <string name="SupportEmailUtil_backups" translatable="false">Backups:</string> -->
 
     <!-- ThreadRecord -->
     <string name="ThreadRecord_group_updated">Η ομάδα ενημερώθηκε</string>
@@ -3393,6 +3377,8 @@
     <string name="NotificationChannel_calls">Κλήσεις</string>
     <!-- Notification channel name for notifications involving failures of some sort (eg donations, message sends, etc.) -->
     <string name="NotificationChannel_failures">Αποτυχίες</string>
+    <!-- Notification channel name for internal-only app issue notifications. Only ever shown to internal users. -->
+    <string name="NotificationChannel_internal_issues">Εσωτερικά προβλήματα</string>
     <string name="NotificationChannel_backups">Αντίγραφα ασφαλείας</string>
     <string name="NotificationChannel_locked_status">Κατάσταση κλειδώματος</string>
     <string name="NotificationChannel_app_updates">Αναβαθμίσεις εφαρμογής</string>
@@ -3458,11 +3444,11 @@
     <!-- Dialog title shown when attempting to save media that has been offloaded from the device by the storage optimization feature. -->
     <string name="AttachmentSaver__cant_save_media">Δεν ήταν δυνατή η αποθήκευση πολυμέσων</string>
     <!-- Dialog message explaining that media cannot be saved because it has been offloaded from the device by the storage optimization feature. -->
-    <string name="AttachmentSaver__media_offloaded_message">Αυτό το αρχείο πολυμέσων έχει αφαιρεθεί από τη συσκευή σου επειδή είναι ενεργοποιημένη η λειτουργία \"Βελτιστοποίηση αποθηκευτικού χώρου στη συσκευή\". Μπορείς να κατεβάσεις τα αρχεία ένα προς ένα ή να απενεργοποιήσεις την επιλογή \"Βελτιστοποίηση αποθηκευτικού χώρου στη συσκευή\" για να κατεβάσεις όλα τα αρχεία πολυμέσων στη συσκευή σου.</string>
+    <string name="AttachmentSaver__media_offloaded_message">Αυτό το αρχείο πολυμέσων έχει αφαιρεθεί από τη συσκευή σου επειδή είναι ενεργοποιημένη η λειτουργία \"Βελτιστοποίηση αποθηκευτικού χώρου Signal\". Μπορείς να κατεβάσεις τα αρχεία ένα προς ένα ή να απενεργοποιήσεις την επιλογή \"Βελτιστοποίηση αποθηκευτικού χώρου Signal\" για να κατεβάσεις όλα τα αρχεία πολυμέσων στη συσκευή σου.</string>
     <!-- Dialog title shown when attempting to save multiple media items, some of which have been offloaded from the device by the storage optimization feature. -->
     <string name="AttachmentSaver__cant_save_all_items">Δεν ήταν δυνατή η αποθήκευση όλων των στοιχείων</string>
     <!-- Dialog message explaining that some selected media cannot be saved because it has been offloaded from the device by the storage optimization feature. -->
-    <string name="AttachmentSaver__some_media_offloaded_message">Ορισμένα αρχεία πολυμέσων που επέλεξες έχουν μεταφερθεί από τη συσκευή σου, καθώς είναι ενεργοποιημένη η λειτουργία \"Βελτιστοποίηση αποθηκευτικό χώρου στη συσκευή\". Μπορείς να αποθηκεύσεις τα στοιχεία ένα προς ένα ή να απενεργοποιήσεις την επιλογή \"Βελτιστοποίηση αποθηκευτικού χώρου στη συσκευή\" για να κατεβάσεις όλα τα αρχεία πολυμέσων στη συσκευή σου.</string>
+    <string name="AttachmentSaver__some_media_offloaded_message">Ορισμένα αρχεία πολυμέσων που επέλεξες έχουν μεταφερθεί από τη συσκευή σου, καθώς είναι ενεργοποιημένη η λειτουργία \"Βελτιστοποίηση αποθηκευτικό χώρου Signal\". Μπορείς να αποθηκεύσεις τα στοιχεία ένα προς ένα ή να απενεργοποιήσεις την επιλογή \"Βελτιστοποίηση αποθηκευτικού χώρου Signal\" για να κατεβάσεις όλα τα αρχεία πολυμέσων στη συσκευή σου.</string>
     <!-- Button label in the offloaded media dialog that navigates to the storage settings screen. -->
     <string name="AttachmentSaver__view_storage_settings">Προβολή ρυθμίσεων αποθηκευτικού χώρου</string>
 
@@ -3531,6 +3517,10 @@
     <string name="UnauthorizedReminder_this_is_likely_because_you_registered_your_phone_number_with_Signal_on_a_different_device">Αυτή η συσκευή δεν είναι πλέον εγγεγραμμένη. Αυτό συνέβη μάλλον επειδή καταχώρησες τον αριθμό τηλεφώνου σου στο Signal σε άλλη συσκευή.</string>
     <!-- Action in reminder banner that will take user to re-register -->
     <string name="UnauthorizedReminder_reregister_action">Επανεγγραφή συσκευής</string>
+    <!-- Message shown in a reminder banner when this linked device is no longer linked to a primary device -->
+    <string name="UnauthorizedReminder_this_device_is_no_longer_linked_relink_to_continue_messaging">Αυτή η συσκευή δεν είναι πια συνδεδεμένη. Σύνδεσε ξανά το Signal στο τηλέφωνό σου για να συνεχίσεις να στέλνεις μηνύματα.</string>
+    <!-- Action in reminder banner that will take the user to re-link this device -->
+    <string name="UnauthorizedReminder_relink_action">Σύνδεση συσκευής ξανά</string>
 
     <!-- Push notification when the app is forcibly logged out by the server. -->
     <string name="LoggedOutNotification_you_have_been_logged_out">Αποσυνδέθηκες από το Signal σε αυτή τη συσκευή.</string>
@@ -5143,6 +5133,32 @@
     <!-- Error message shown when we fail to delete the data for some unknown reason -->
     <string name="preferences_account_delete_all_data_failed">Αποτυχία διαγραφής δεδομένων</string>
 
+    <!-- LinkedDeviceAccountSettingsFragment -->
+    <!-- Title of an informational card shown on the account settings screen of a linked device -->
+    <string name="LinkedDeviceAccountSettingsFragment__this_is_a_linked_device">Αυτή είναι μία συνδεδεμένη συσκευή</string>
+    <!-- Body of an informational card explaining that account settings must be managed from the primary device -->
+    <string name="LinkedDeviceAccountSettingsFragment__to_manage_your_account_settings">Για να διαχειριστείς τις ρυθμίσεις του λογαριασμού σου, άνοιξε την εφαρμογή Signal στην κύρια συσκευή σου.</string>
+    <!-- Title of a settings row that deletes all Signal data from this linked device -->
+    <string name="LinkedDeviceAccountSettingsFragment__delete_app_data">Διαγραφή δεδομένων εφαρμογής</string>
+    <!-- Subtitle of the delete app data row explaining what it does -->
+    <string name="LinkedDeviceAccountSettingsFragment__this_will_remove_all_data">Αυτή η ενέργεια θα διαγράψει όλα τα δεδομένα από την εφαρμογή Signal σε αυτή τη συσκευή.</string>
+    <!-- Title of the confirmation dialog shown when deleting app data from a linked device -->
+    <string name="LinkedDeviceAccountSettingsFragment__delete_app_data_question">Διαγραφή δεδομένων εφαρμογής;</string>
+    <!-- Message of the confirmation dialog explaining that only this device\'s data is deleted, not the account -->
+    <string name="LinkedDeviceAccountSettingsFragment__this_will_delete_all_data_and_messages">Αυτή η ενέργεια θα διαγράψει όλα τα δεδομένα και τα μηνύματα από την εφαρμογή Signal σε αυτή τη συσκευή. Ο λογαριασμός σου στο Signal και τα δεδομένα στην κύρια συσκευή σου ή σε άλλες συνδεδεμένες συσκευές δεν θα διαγραφούν. Η εφαρμογή θα κλείσει αφού ολοκληρωθεί αυτή η διαδικασία.</string>
+
+    <!-- LinkedDeviceAccountLearnMoreBottomSheet -->
+    <!-- Emphasized lead-in phrase shown in bold at the start of the learn more sheet body. Must appear verbatim within LinkedDeviceAccountLearnMoreBottomSheet__linked_devices_let_you_access. -->
+    <string name="LinkedDeviceAccountLearnMoreBottomSheet__linked_devices">Συνδεμένες συσκευές</string>
+    <!-- Body text of the linked devices learn more sheet. The leading \"Linked Devices\" is shown in bold. -->
+    <string name="LinkedDeviceAccountLearnMoreBottomSheet__linked_devices_let_you_access">Οι συνδεδεμένες συσκευές σού επιτρέπουν να έχεις ασφαλή πρόσβαση στον λογαριασμό και στα μηνύματά σου στο Signal από οποιαδήποτε από τις επιπλέον συσκευές σου.</string>
+    <!-- Bullet point describing what devices can be linked -->
+    <string name="LinkedDeviceAccountLearnMoreBottomSheet__you_can_link_a_desktop">Μπορείς να συνδέσεις έναν υπολογιστή, ένα tablet ή ένα επιπλέον τηλέφωνο</string>
+    <!-- Bullet point describing that the primary device manages linked devices -->
+    <string name="LinkedDeviceAccountLearnMoreBottomSheet__your_primary_device_manages">Η κύρια συσκευή σου διαχειρίζεται τις συνδέσεις, μπορείς να συνδέσεις έως και 5 συσκευές.</string>
+    <!-- Bullet point describing that some settings are only available on the primary device -->
+    <string name="LinkedDeviceAccountLearnMoreBottomSheet__some_account_settings">Η διαχείριση ορισμένων ρυθμίσεων λογαριασμού πραγματοποιείται αποκλειστικά στην κύρια συσκευή σου, συμπεριλαμβανομένων των ρυθμίσεων λογαριασμού και των αντιγράφων ασφαλείας.</string>
+
     <!-- TransferOrRestoreFragment -->
     <string name="TransferOrRestoreFragment__transfer_or_restore_account">Μεταφορά ή επαναφορά λογαριασμού</string>
     <string name="TransferOrRestoreFragment__if_you_have_previously_registered_a_signal_account">Αν έχεις ήδη δημιουργήσει έναν λογαριασμό Signal στο παρελθόν, μπορείς να μεταφέρεις ή να επαναφέρεις τον λογαριασμό σου και τα μηνύματα</string>
@@ -5636,18 +5652,6 @@
     <!-- GroupDescriptionDialog -->
     <string name="GroupDescriptionDialog__group_description">Περιγραφή ομάδας</string>
 
-    <!-- QualitySelectorBottomSheetDialog -->
-    <!-- Label for our standard quality media conversion. -->
-    <string name="QualitySelectorBottomSheetDialog__standard">Κανονική</string>
-    <!-- Description for our standard quality media conversion. -->
-    <string name="QualitySelectorBottomSheetDialog__faster_less_data">Γρηγορότερα, λιγότερα δεδομένα</string>
-    <!-- Label for our high quality media conversion. This has better quality than standard. -->
-    <string name="QualitySelectorBottomSheetDialog__high">Υψηλή</string>
-    <!-- Label for our high quality media conversion. This has better quality than standard. -->
-    <string name="QualitySelectorBottomSheetDialog__slower_more_data">Πιο αργά, περισσότερα δεδομένα</string>
-    <!-- Title heading for our media conversion quality selector. -->
-    <string name="QualitySelectorBottomSheetDialog__media_quality">Ποιότητα πολυμέσων</string>
-
     <!-- AppSettingsFragment -->
     <!-- String alerting user that something is wrong with their backups subscription -->
     <string name="AppSettingsFragment__renew_your_signal_backups_subscription">Ανανέωσε τη συνδρομή σου στα αντίγραφα ασφαλείας Signal Secure Backups</string>
@@ -6056,10 +6060,6 @@
     <string name="DataAndStorageSettingsFragment__sending_high_quality_media_will_use_more_data">Η αποστολή πολυμέσων υψηλής ποιότητας θα καταναλώνει περισσότερα δεδομένα.</string>
     <!-- Disclaimer shown under the media auto-download settings. Placeholder is a formatted size like "100 KB". -->
     <string name="DataAndStorageSettingsFragment__voice_messages_and_stickers_under_size_are_always_auto_downloaded">Τα ηχητικά μηνύματα και τα αυτοκόλλητα (κάτω από %1$s) λαμβάνονται πάντα αυτόματα.</string>
-    <!-- Setting option that can be selected to default media to be sent as high quality by default -->
-    <string name="DataAndStorageSettingsFragment__high">Υψηλή</string>
-    <!-- Setting option that can be selected to default media to be sent as standard quality by default -->
-    <string name="DataAndStorageSettingsFragment__standard">Κανονική</string>
     <string name="DataAndStorageSettingsFragment__calls">Κλήσεις</string>
     <!-- Title of a toggle that keeps Signal connected in the background via a persistent foreground service instead of using FCM push messages -->
     <string name="DataAndStorageSettingsFragment__stay_connected_in_background">Μείνε σε σύνδεση στο παρασκήνιο</string>
@@ -6397,18 +6397,11 @@
     <string name="MediaReviewFragment__one_or_more_items_were_too_large">Ένα ή περισσότερα αντικείμενα ήταν πολύ μεγάλα</string>
     <string name="MediaReviewFragment__one_or_more_items_were_invalid">Ένα ή περισσότερα αντικείμενα δεν ήταν έγκυρα</string>
     <string name="MediaReviewFragment__too_many_items_selected">Επιλέχθηκαν πάρα πολλά αντικείμενα</string>
+    <string name="MediaReviewFragment__video_trimmed_to_fit">Έγινε περικοπή του βίντεό σου ώστε να μην υπερβαίνει το όριο μεγέθους</string>
     <!-- Small notification presented to the user when they set their video to view-once mode -->
     <string name="MediaReviewFragment__video_set_to_view_once">Ρύθμιση βίντεο σε μια μόνο προβολή</string>
     <!-- Small notification presented to the user when they set their photo to view-once mode -->
     <string name="MediaReviewFragment__photo_set_to_view_once">Ρύθμιση φωτογραφίας σε μια μόνο προβολή</string>
-    <!-- Small notification presented to the user when they set their video to be sent in high visual quality. -->
-    <string name="MediaReviewFragment__video_set_to_high_quality">Ρύθμιση βίντεο σε υψηλή ποιότητα</string>
-    <!-- Small notification presented to the user when they set their video to be sent in standard (lower than high) visual quality. -->
-    <string name="MediaReviewFragment__video_set_to_standard_quality">Ρύθμιση βίντεο σε τυπική ποιότητα</string>
-    <!-- Small notification presented to the user when they set their still image to be sent in high visual quality. -->
-    <string name="MediaReviewFragment__photo_set_to_high_quality">Ρύθμιση φωτογραφίας σε υψηλή ποιότητα</string>
-    <!-- Small notification presented to the user when they set their still image to be sent in standard (lower than high) visual quality. -->
-    <string name="MediaReviewFragment__photo_set_to_standard_quality">Ρύθμιση φωτογραφίας σε τυπική ποιότητα</string>
     <!-- Accessibility label describing the add media button on the Media review screen -->
     <string name="MediaReviewFragment__add_media_accessibility_label">Προσθήκη πολυμέσου</string>
     <!-- Accessibility label describing the brush and pen button on the Media review screen -->
@@ -6427,16 +6420,6 @@
     <string name="MediaReviewFragment__send_media_accessibility_label">Αποστολή πολυμέσων</string>
     <!-- Accessibility label describing the finish adding a message button on the Media review screen dialog -->
     <string name="MediaReviewFragment__finish_adding_a_message_accessibility_label">Ολοκλήρωση προσθήκης ενός μηνύματος</string>
-    <!-- Small notification presented to the user when they set multiple media items to be sent in high visual quality. -->
-    <plurals name="MediaReviewFragment__items_set_to_high_quality">
-        <item quantity="one">Ρύθμιση %1$d αντικειμένου σε υψηλή ποιότητα</item>
-        <item quantity="other">Ρύθμιση %1$d αντικειμένων σε υψηλή ποιότητα</item>
-    </plurals>
-    <!-- Small notification presented to the user when they set multiple media items to be sent in standard (lower than high) visual quality. -->
-    <plurals name="MediaReviewFragment__items_set_to_standard_quality">
-        <item quantity="one">Ρύθμιση %1$d αντικειμένου σε τυπική ποιότητα</item>
-        <item quantity="other">Ρύθμιση %1$d αντικειμένων σε τυπική ποιότητα</item>
-    </plurals>
 
     <string name="ImageEditorHud__cancel">Ακύρωση</string>
     <string name="ImageEditorHud__draw">Σχεδίαση</string>
@@ -6949,7 +6932,7 @@
     <!-- Donation receipts amount title -->
     <string name="DonationReceiptDetailsFragment__amount">Ποσό</string>
     <!-- Donation receipts thanks -->
-    <string name="DonationReceiptDetailsFragment__thank_you_for_supporting">Ευχαριστούμε που υποστηρίζεις το Signal. Η συνεισφορά σου βοηθά στην αποστολή της ανάπτυξης τεχνολογίας ιδιωτικότητας ανοιχτού κώδικα, που προστατεύει την ελευθερία της έκφρασης και δίνει τη δυνατότητα ασφαλών διεθνών επικοινωνιών για εκατομμύρια ανθρώπους σε όλο τον κόσμο. Αν είσαι κάτοικος των Ηνωμένων Πολιτειών, παρακαλούμε κράτα αυτή την απόδειξη για τα φορολογικά σου αρχεία. Το Signal Technology Foundation ένας μη κερδοσκοπικός οργανισμός στις Ηνωμένες Πολιτείες, με tax–exemption σύμφωνα με την ενότητα 501c3 του Internal Revenue Code. Το Federal Tax ID μας είναι 82–4506840.</string>
+    <string name="DonationReceiptDetailsFragment__thank_you_for_supporting" tools:ignore="TypographyDashes">Σε ευχαριστούμε που στηρίζεις το Signal. Η συνεισφορά σου βοηθά στην ανάπτυξη της τεχνολογίας απορρήτου ανοιχτού κώδικα, που προστατεύει την ελευθερία της έκφρασης και δίνει τη δυνατότητα ασφαλών διεθνών επικοινωνιών για εκατομμύρια ανθρώπους σε όλο τον κόσμο. Αν είσαι κάτοικος των Ηνωμένων Πολιτειών, παρακαλούμε κράτα αυτή την απόδειξη για τα φορολογικά σου αρχεία. Το Signal Technology Foundation είναι ένας μη κερδοσκοπικός οργανισμός στις Ηνωμένες Πολιτείες, που έχει φοροαπαλλαγή σύμφωνα με την ενότητα 501c3 του Internal Revenue Code. Το Federal Tax ID μας είναι 82-4506840. Το Signal δεν παρείχε κανένα αγαθό ή υπηρεσία ως αντάλλαγμα για αυτή τη συνεισφορά.</string>
     <!-- Donation reciepts screen empty state title -->
     <string name="DonationReceiptListFragment__no_receipts">Χωρίς παραλήπτες</string>
 
@@ -8285,6 +8268,12 @@
 
     <!-- Text describing how to restore a backup displayed on the on-device backups screen -->
     <string name="OnDeviceBackupsScreen__to_restore_a_backup">"Για να ανακτήσεις ένα αντίγραφο ασφαλείας, εγκατάστησε από την αρχή το Signal. Άνοιξε την εφαρμογή, πάτα \"Επαναφορά αντίγραφου ασφαλείας\" και εντόπισε τον φάκελο αντιγράφου ασφαλείας."</string>
+    <!-- Body of a dialog shown when turning on on-device backups while "Optimize Signal storage" is enabled, warning that optimized media won\'t be included -->
+    <string name="OnDeviceBackupsScreen__you_have_optimize_signal_storage_on">Έχεις ενεργοποιήσει την επιλογή «Βελτιστοποίηση αποθηκευτικού χώρου Signal». Αν θέλεις να συμπεριλάβεις όλα τα αρχεία πολυμέσων στα αντίγραφο ασφαλείας της συσκευής σου, απενεργοποίησε τη ρύθμιση.</string>
+    <!-- Dialog action that takes the user to the "Optimize Signal storage" setting -->
+    <string name="OnDeviceBackupsScreen__view_setting">Προβολή ρύθμισης</string>
+    <!-- Dialog action to proceed with turning on on-device backups without turning off "Optimize Signal storage" -->
+    <string name="OnDeviceBackupsScreen__continue_without_turning_off">Συνέχεια χωρίς απενεργοποίηση</string>
 
     <!-- Title of a megaphone shown to prompt the user to verify their recovery key -->
     <string name="VerifyBackupKey__title">Επαλήθευσε το κλειδί ανάκτησης</string>
@@ -8661,13 +8650,19 @@
     <!-- Setting description for syncing automated chat limit trimming (deleting messages automatically by length or date) to linked devices -->
     <string name="ManageStorageSettingsFragment_apply_limits_description">Όταν η επιλογή είναι ενεργοποιημένη, τα όρια συνομιλίας θα διαγράφουν επίσης μηνύματα από τις συνδεδεμένες συσκευές σου.</string>
     <!-- Setting section title header for storage optimization -->
-    <string name="ManageStorageSettingsFragment__on_device_storage">Αποθηκευτικός χώρος συσκευής</string>
+    <string name="ManageStorageSettingsFragment__on_device_storage">Αποθηκευτικός χώρος Signal</string>
     <!-- Setting row title for storage optimization -->
-    <string name="ManageStorageSettingsFragment__optimize_on_device_storage">Βελτιστοποίηση αποθηκευτικού χώρου συσκευής</string>
+    <string name="ManageStorageSettingsFragment__optimize_on_device_storage">Βελτιστοποίηση χώρου αποθήκευσης Signal</string>
     <!-- Setting row explanation for storage optimization -->
     <string name="ManageStorageSettingsFragment__unused_media_will_be_offloaded">Ο φόρτος των αχρησιμοποίητων πολυμέσων θα μειωθεί, αλλά μπορούν να ληφθούν από το αντίγραφο ασφαλείας σου ανά πάσα στιγμή.</string>
     <!-- Dialog message for paid tier pending dialog -->
     <string name="ManageStorageSettingsFragment__storage_optimization_can_only_be_used">Η βελτιστοποίηση αποθηκευτικού χώρου μπορεί να χρησιμοποιηθεί μόνο με την πληρωμένη βαθμίδα των αντιγράφων ασφαλείας Signal Secure Backups. Η συνδρομή για αντίγραφα ασφαλείας βρίσκεται ακόμη υπό επεξεργασία και δεν είναι ακόμη ενεργή. Δοκίμασε αργότερα.</string>
+    <!-- Title of a dialog shown when turning on "Optimize Signal storage" while on-device backups are enabled -->
+    <string name="ManageStorageSettingsFragment__media_will_be_removed_from_your_on_device_backup">Τα αρχεία πολυμέσων θα διαγραφούν από το αντίγραφο ασφαλείας που βρίσκεται στη συσκευή σου</string>
+    <!-- Body of a dialog shown when turning on "Optimize Signal storage" while on-device backups are enabled -->
+    <string name="ManageStorageSettingsFragment__turning_on_optimize_signal_storage_will_offload">Η ενεργοποίηση της επιλογής «Βελτιστοποίηση αποθηκευτικού χώρου Signal» θα διαγράψει τα παλιά αρχεία πολυμέσων από τη συσκευή σου. Μπορείς να τα κατεβάσεις ξανά ανά πάσα στιγμή. Επίσης, θα διαγράψει τα παλιά αρχεία πολυμέσων από το αντίγραφο ασφαλείας στη συσκευή σου.</string>
+    <!-- Dialog action to confirm turning on "Optimize Signal storage" -->
+    <string name="ManageStorageSettingsFragment__turn_on">Ενεργοποίηση</string>
 
     <!-- UpgradeToEnableOptimizedStorageSheet -->
     <!-- Title on a bottom sheet, detailing that the user must upgrade to enable storage optimization -->
@@ -8750,6 +8745,8 @@
     <string name="BackupsSettingsFragment__subscription_canceled">Η συνδρομή ακυρώθηκε</string>
     <!-- Subtitle for row for no backup ever created -->
     <string name="BackupsSettingsFragment_automatic_backups_with_signals">Τα αυτόματα αντίγραφα ασφαλείας του Signal διασφαλίζουν υπηρεσία κρυπτογραφημένης αποθήκευσης από άκρο σε άκρο.</string>
+    <!-- Subtitle shown on a linked device when backups are off, directing the user to set them up on their phone -->
+    <string name="BackupsSettingsFragment__automatic_backups_get_started_on_your_phone">Τα αυτόματα αντίγραφα ασφαλείας του Signal διασφαλίζουν υπηρεσία κρυπτογραφημένης αποθήκευσης από άκρο σε άκρο. Ξεκίνησε στο τηλέφωνό σου.</string>
     <!-- Subtitle for row for backups that are active but subscription not found -->
     <string name="BackupsSettingsFragment_subscription_not_found_on_this_device">"Δεν βρέθηκε συνδρομή σε αυτήν τη συσκευή."</string>
     <!-- Action button label to set up backups -->
@@ -8767,7 +8764,7 @@
     <!-- Displayed as a label when remote backups are off -->
     <string name="RemoteBackupsSettingsFragment__off">Ανενεργό</string>
     <!-- Text shown in a popup indicating that the user needs to enter their screen lock -->
-    <string name="RemoteBackupsSettingsFragment__authenticatino_required">Απαιτείται έλεγχος ταυτότητας</string>
+    <string name="RemoteBackupsSettingsFragment__authentication_required">Απαιτείται έλεγχος ταυτότητας</string>
     <!-- Row label to launch payment history screen -->
     <string name="RemoteBackupsSettingsFragment__payment_history">Ιστορικό πληρωμών</string>
     <!-- Section header for backup information -->
@@ -8853,6 +8850,16 @@
     <string name="RemoteBackupsSettingsFragment__s_at_s">%1$s στις %2$s</string>
     <!-- Subtext describing when a backup has never taken place. -->
     <string name="RemoteBackupsSettingsFragment__never">Ποτέ</string>
+    <!-- Subtext on a linked device describing when the primary device last backed up. Placeholder is the formatted date and time. -->
+    <string name="RemoteBackupsSettingsFragment__your_phone_s">Το τηλέφωνό σου · %1$s</string>
+    <!-- Message shown on a linked device with a free backup plan explaining that the subscription is managed on the primary device -->
+    <string name="RemoteBackupsSettingsFragment__you_can_manage_or_upgrade_your_subscription_on_your_primary_device">Μπορείς να διαχειριστείς ή να αναβαθμίσεις τη συνδρομή σου στα Ασφαλή αντίγραφα Signal στην κύρια συσκευή σου.</string>
+    <!-- Message shown on a linked device with a paid backup plan explaining that the subscription is managed on the primary device -->
+    <string name="RemoteBackupsSettingsFragment__you_can_manage_or_cancel_your_subscription_on_your_primary_device">Μπορείς να διαχειριστείς ή να ακυρώσεις τη συνδρομή σου στα Ασφαλή αντίγραφα Signal στην κύρια συσκευή σου.</string>
+    <!-- Message shown on a linked device with a canceled backup subscription explaining that the subscription is managed on the primary device -->
+    <string name="RemoteBackupsSettingsFragment__you_can_manage_or_renew_your_subscription_on_your_primary_device">Μπορείς να διαχειριστείς ή να ανανεώσεις τη συνδρομή σου στα Ασφαλή αντίγραφα Signal στην κύρια συσκευή σου.</string>
+    <!-- Message shown on a linked device when backups are off or the subscription was not found, explaining that backups are managed on the primary device -->
+    <string name="RemoteBackupsSettingsFragment__you_can_manage_or_upgrade_backups_on_your_primary_device">Μπορείς να διαχειριστείς ή να αναβαθμίσεις τα Ασφαλή αντίγραφα Signal στην κύρια συσκευή σου.</string>
     <!-- Button label to perform a backup immediately -->
     <string name="RemoteBackupsSettingsFragment__back_up_now">Δημιουργία αντίγραφου τώρα</string>
     <!-- Dialog title when confirming whether to turn off and deleting backups -->
@@ -9144,19 +9151,37 @@
     <!-- Dialog title for confirming you need to disable optimized storage and download media to rotate AEP key -->
     <string name="MessageBackupsKeyRecordScreen__download_media">Λήψη πολυμέσων</string>
     <!-- Dialog body for confirming you need to disable optimized storage and download media to rotate AEP key -->
-    <string name="MessageBackupsKeyRecordScreen__to_create_a_new_backup_key">Για να δημιουργήσεις ένα νέο κλειδί ανάκτησης πρέπει να απενεργοποιήσεις τη «Βελτιστοποίηση αποθηκευτικού χώρου» και να περιμένεις μέχρι να ολοκληρωθεί η λήψη των πολυμέσων σου. Όταν η λήψη ολοκληρωθεί, μπορείς να δημιουργήσεις ένα νέο κλειδί.</string>
+    <string name="MessageBackupsKeyRecordScreen__to_create_a_new_backup_key">Για να δημιουργήσεις ένα νέο κλειδί ανάκτησης πρέπει να απενεργοποιήσεις τη \"Βελτιστοποίηση αποθηκευτικού χώρου Signal\" και να περιμένεις μέχρι να ολοκληρωθεί η λήψη των πολυμέσων σου. Όταν η λήψη ολοκληρωθεί, μπορείς να δημιουργήσεις ένα νέο κλειδί.</string>
     <!-- Action label to turn off optimized storage and download media -->
     <string name="MessageBackupsKeyRecordScreen__turn_off_and_download">Απενεργοποίηση και λήψη</string>
     <!-- Bottom Sheet title for creating a new AEP key -->
     <string name="MessageBackupsKeyRecordScreen__create_a_new_backup_key">Δημιουργία νέου κλειδιού ανάκτησης</string>
     <!-- Bottom Sheet body for creating a new AEP key -->
-    <string name="MessageBackupsKeyRecordScreen__creating_a_new_key_is_only_necessary">Η δημιουργία ενός νέου κλειδιού είναι απαραίτητη μόνο εάν κάποιος άλλος γνωρίζει το κλειδί σου. Θα πρέπει να ανεβάσεις ξανά το αντίγραφο ασφαλείας σου, συμπεριλαμβανομένων των πολυμέσων. Αν χρησιμοποιείς τη «Βελτιστοποίηση αποθηκευτικού χώρου» θα πρέπει να πραγματοποιήσεις πρώτα λήψη των πολυμέσων που αφαιρέθηκαν.</string>
+    <string name="MessageBackupsKeyRecordScreen__creating_a_new_key_is_only_necessary">Η δημιουργία ενός νέου κλειδιού είναι απαραίτητη μόνο εάν κάποιος άλλος γνωρίζει το κλειδί σου. Θα πρέπει να ανεβάσεις ξανά το αντίγραφο ασφαλείας σου, συμπεριλαμβανομένων των πολυμέσων. Αν χρησιμοποιείς τη \"Βελτιστοποίηση αποθηκευτικού χώρου Signal\" θα πρέπει να πραγματοποιήσεις πρώτα λήψη των πολυμέσων που αφαιρέθηκαν.</string>
     <!-- Dialog title shown when user attempts to exit backup setup before completion -->
     <string name="MessageBackupsKeyRecordScreen__exit_backup_setup">Έξοδος από τη ρύθμιση αντιγράφων ασφαλείας;</string>
     <!-- Dialog body warning user that backup setup is incomplete -->
     <string name="MessageBackupsKeyRecordScreen__you_have_not_finished_setting_up_backups">Δεν ολοκλήρωσες τη ρύθμιση των αντιγράφων ασφαλείας και δεν έχει δημιουργηθεί κανένα αντίγραφο ασφαλείας. Μπορείς να ενεργοποιήσεις τα αντίγραφα ασφαλείας στις Ρυθμίσεις.</string>
     <!-- Dialog confirmation button to exit backup setup -->
     <string name="MessageBackupsKeyRecordScreen__exit_backup_setup_confirm">Έξοδος από τη ρύθμιση αντιγράφων ασφαλείας</string>
+    <!-- Screen title when saving your recovery key -->
+    <string name="MessageBackupsKeyRecordScreen__save_your_recovery_key">Αποθήκευσε το κλειδί ανάκτησής σου</string>
+    <!-- Screen subtitle for the recovery key screen -->
+    <string name="MessageBackupsKeyRecordScreen__your_recovery_key">Το κλειδί ανάκτησης είναι ένας κωδικός 64 χαρακτήρων που σου επιτρέπει να επαναφέρεις το αντίγραφο ασφαλείας σου. Εάν ξεχάσεις το κλειδί σου, δεν θα μπορέσεις να επαναφέρεις τον λογαριασμό σου.</string>
+    <!-- Hint text to see the full recovery key -->
+    <string name="MessageBackupsKeyRecordScreen__see_full_key">Προβολή πλήρους κλειδιού</string>
+    <!-- Bottom sheet caption to confirm your recovery key -->
+    <string name="MessageBackupsKeyRecordScreen__confirm_that_your_recovery">Επιβεβαίωσε ότι το κλειδί ανάκτησής σου καταγράφηκε σωστά. Θα σου ζητηθεί να συμπληρώσεις τον αποθηκευμένο σου κωδικό πρόσβασης στο επόμενο βήμα.</string>
+    <!-- Button to confirm the recovery key -->
+    <string name="MessageBackupsKeyRecordScreen__confirm_recovery">Επιβεβαίωσε το κλειδί ανάκτησης</string>
+    <!-- Toast shown when the key is confirmed -->
+    <string name="MessageBackupsKeyRecordScreen__recover_key_confirmed">Το κλειδί ανάκτησης επιβεβαιώθηκε</string>
+    <!-- Dialog title shown when the recovery key fails to confirm -->
+    <string name="MessageBackupsKeyRecordScreen__recover_key_error">Σφάλμα κατά την επιβεβαίωση του κλειδιού ανάκτησης</string>
+    <!-- Dialog body shown when the recovery key fails to confirm -->
+    <string name="MessageBackupsKeyRecordScreen__recover_key_error_body">Το κλειδί ανάκτησής σου δεν επιβεβαιώθηκε. Βεβαιώσου ότι το αποθήκευσες στον διαχειριστή κωδικών πρόσβασής σου ή αποθήκευσέ το χειροκίνητα.</string>
+    <!-- Button option to save the key manually -->
+    <string name="MessageBackupsKeyRecordScreen__save_key_manually">Χειροκίνητη αποθήκευση κλειδιού</string>
 
     <!-- BackupKeyDisplayFragment -->
     <!-- Dialog title when exiting before confirming new key -->
@@ -9889,8 +9914,28 @@
     <!-- Body for screen shown to let the user know that displaying their member label will take priority over their about text. -->
     <string name="MemberLabelsAboutOverride__body">Σε αυτήν την ομάδα, η ετικέτα μέλους σου θα εμφανίζεται δίπλα στη φωτογραφία σου στη θέση της ενότητας \"Πληροφορίες\".</string>
 
-    <!-- Label for internal-only section showing groups with same members -->
-  <!-- Removed by excludeNonTranslatables <string name="AddGroupDetailsFragment__groups_with_same_members" translatable="false">Groups with same members (Labs)</string> -->
+    <!-- Header for the section shown when creating a group that lists existing groups with the exact same members. Includes the number of such groups. -->
+    <plurals name="AddGroupDetailsFragment__d_groups_with_same_members">
+        <item quantity="one">%1$d ομάδα με τα ίδια μέλη</item>
+        <item quantity="other">%1$d ομάδες με τα ίδια μέλη</item>
+    </plurals>
+
+    <!-- Header for a section showing all group member -->
+    <string name="MemberSearchFragment__search_members">Αναζήτηση μελών</string>
+    <!-- Header for a section showing all group members who are contacts -->
+    <string name="MemberSearchFragment__search_contacts">Αναζήτηση επαφών</string>
+    <!-- Header for a section showing all group member who are admins -->
+    <string name="MemberSearchFragment__search_admins">Αναζήτηση διαχειριστών</string>
+    <!-- Dialog title to filter search by -->
+    <string name="MemberSearchFragment__filter">Φιλτράρισμα ανά</string>
+    <!-- Dialog option for all group members -->
+    <string name="MemberSearchFragment__filter_all_members">Όλα τα μέλη</string>
+    <!-- Dialog option for group admins -->
+    <string name="MemberSearchFragment__filter_admins">Διαχειριστές</string>
+    <!-- Dialog option for your contacts -->
+    <string name="MemberSearchFragment__filter_contacts">Επαφές</string>
+    <!-- Button to invite members via a group link -->
+    <string name="MemberSearchFragment__invite_via">Πρόσκληση μέσω συνδέσμου ομάδας</string>
 
     <!-- Title of the sheet shown when a local backup restore could not be completed -->
     <string name="CouldNotCompleteBackupRestoreSheet__title">Δεν είναι δυνατή η επαναφορά του αντιγράφου ασφαλείας</string>
@@ -9942,7 +9987,7 @@
     <!-- Button opening a help article with more information about recovery key safety -->
     <string name="RecoveryKeyWarningSheetContent__learn_more">Μάθε περισσότερα</string>
     <!-- Inline link opening a help article with more information about recovery key safety -->
-    <string name="RecoveryKeyWarningSheetContent__learn_more_period">Learn more.</string>
+    <string name="RecoveryKeyWarningSheetContent__learn_more_period">Μάθε περισσότερα.</string>
     <!-- Button declining to paste/share the recovery key, dismissing the warning sheet -->
     <string name="RecoveryKeyWarningSheetContent__do_not_share_key">Μην κοινοποιήσεις το κλειδί</string>
     <!-- Button indicating the user wants to proceed with sharing/pasting the recovery key, which shows a final confirmation -->

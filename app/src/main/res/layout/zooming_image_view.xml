@@ -4,8 +4,7 @@
     tools:viewBindingIgnore="true"
        tools:context="org.thoughtcrime.securesms.components.ZoomingImageView">
 
-    <org.github.chrisbanes.photoview.PhotoView
-        android:id="@+id/image_view"
+    <com.github.chrisbanes.photoview.PhotoView android:id="@+id/image_view"
                                                android:layout_width="match_parent"
                                                android:layout_height="match_parent"
                                                android:visibility="visible"/>

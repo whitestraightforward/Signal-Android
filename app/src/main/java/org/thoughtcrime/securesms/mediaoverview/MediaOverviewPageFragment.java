@@ -19,6 +19,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Observer;
@@ -27,8 +28,9 @@ import androidx.loader.content.Loader;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import org.codewaves.stickyheadergrid.StickyHeaderGridLayoutManager;
+import com.codewaves.stickyheadergrid.StickyHeaderGridLayoutManager;
 
+import org.signal.core.ui.compose.SignalIcons;
 import org.signal.core.util.ByteSize;
 import org.signal.core.util.DimensionUnit;
 import org.signal.core.util.concurrent.LifecycleDisposable;
@@ -46,8 +48,9 @@ import org.thoughtcrime.securesms.database.AttachmentTable;
 import org.thoughtcrime.securesms.database.MediaTable;
 import org.thoughtcrime.securesms.database.loaders.GroupedThreadMediaLoader;
 import org.thoughtcrime.securesms.database.loaders.MediaLoader;
+import org.thoughtcrime.securesms.jobs.AttachmentDownloadJob;
 import org.thoughtcrime.securesms.mediapreview.MediaIntentFactory;
-import org.thoughtcrime.securesms.mediapreview.MediaPreviewV2Activity;
+import org.thoughtcrime.securesms.mediapreview.MediaPreviewActivity;
 import org.thoughtcrime.securesms.mms.PartAuthority;
 import org.signal.core.ui.permissions.Permissions;
 import org.thoughtcrime.securesms.keyvalue.SignalStore;
@@ -55,6 +58,7 @@ import org.thoughtcrime.securesms.util.BottomOffsetDecoration;
 import org.thoughtcrime.securesms.util.CommunicationActions;
 import org.thoughtcrime.securesms.util.OffloadedMediaDialogUtil;
 import org.thoughtcrime.securesms.util.MediaUtil;
+import org.thoughtcrime.securesms.util.SystemWindowInsetsSetter;
 import org.thoughtcrime.securesms.util.ViewUtil;
 
 import org.json.JSONArray;
@@ -170,6 +174,10 @@ public final class MediaOverviewPageFragment extends LoggingFragment
                                               this,
                                               sorting.isRelatedToFileSize(),
                                               threadId == MediaTable.ALL_THREADS);
+    this.recyclerView.setClipToPadding(false);
+    SystemWindowInsetsSetter.attach(recyclerView, getViewLifecycleOwner(), WindowInsetsCompat.Type.navigationBars());
+    SystemWindowInsetsSetter.attach(bottomActionBar, getViewLifecycleOwner(), WindowInsetsCompat.Type.navigationBars(), SystemWindowInsetsSetter.ApplyMode.MARGIN);
+
     this.recyclerView.setAdapter(adapter);
     this.recyclerView.setLayoutManager(gridManager);
     this.recyclerView.setHasFixedSize(true);
@@ -323,24 +331,37 @@ public final class MediaOverviewPageFragment extends LoggingFragment
       return;
     }
 
-    if (mediaRecord.getAttachment() == null || mediaRecord.getAttachment().getDisplayUri() == null) {
+    DatabaseAttachment attachment = mediaRecord.getAttachment();
+
+    if (attachment == null) {
       return;
     }
 
-    DatabaseAttachment attachment = mediaRecord.getAttachment();
+    if (attachment.getDisplayUri() == null) {
+      if (attachment.transferState == AttachmentTable.TRANSFER_RESTORE_OFFLOADED) {
+        AttachmentDownloadJob.downloadAttachmentIfNeeded(attachment);
+      }
+      return;
+    }
 
     if (MediaUtil.isVideo(attachment) || MediaUtil.isImage(attachment)) {
-      if (mediaRecord.getAttachment().transferState != AttachmentTable.TRANSFER_PROGRESS_DONE && mediaRecord.getAttachment().transferState != AttachmentTable.TRANSFER_RESTORE_OFFLOADED) {
+      if (attachment.transferState != AttachmentTable.TRANSFER_PROGRESS_DONE && attachment.transferState != AttachmentTable.TRANSFER_RESTORE_OFFLOADED) {
         Toast.makeText(context, R.string.MediaOverviewActivity_this_media_is_not_sent_yet, Toast.LENGTH_LONG).show();
         return;
       }
       MediaIntentFactory.MediaPreviewArgs args = new MediaIntentFactory.MediaPreviewArgs(
           threadId,
           mediaRecord.getDate(),
+          mediaRecord.getMessageId(),
+          mediaRecord.getRecipientId(),
+          mediaRecord.getThreadRecipientId(),
+          mediaRecord.isOutgoing(),
           Objects.requireNonNull(mediaRecord.getAttachment().getDisplayUri()),
+          mediaRecord.getAttachment().getUri(),
           mediaRecord.getContentType(),
           mediaRecord.getAttachment().size,
           mediaRecord.getAttachment().caption,
+          null,
           true,
           true,
           threadId == MediaTable.ALL_THREADS,
@@ -356,8 +377,8 @@ public final class MediaOverviewPageFragment extends LoggingFragment
               DimensionUnit.DP.toDp(12)
           ),
           false);
-      view.setTransitionName(MediaPreviewV2Activity.SHARED_ELEMENT_TRANSITION_NAME);
-      ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(requireActivity(), view, MediaPreviewV2Activity.SHARED_ELEMENT_TRANSITION_NAME);
+      view.setTransitionName(MediaPreviewActivity.SHARED_ELEMENT_TRANSITION_NAME);
+      ActivityOptions options = ActivityOptions.makeSceneTransitionAnimation(requireActivity(), view, MediaPreviewActivity.SHARED_ELEMENT_TRANSITION_NAME);
       context.startActivity(MediaIntentFactory.create(context, args), options.toBundle());
     } else {
       if (!MediaUtil.isAudio(attachment)) {

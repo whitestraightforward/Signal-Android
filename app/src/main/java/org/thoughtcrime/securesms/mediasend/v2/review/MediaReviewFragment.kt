@@ -22,6 +22,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -39,6 +40,10 @@ import org.signal.core.util.concurrent.LifecycleDisposable
 import org.signal.core.util.concurrent.SimpleTask
 import org.signal.core.util.isNotNullOrBlank
 import org.signal.core.util.logging.Log
+import org.signal.mediasend.MediaConstraints
+import org.signal.mediasend.SentMediaQuality
+import org.signal.mediasend.screens.edit.video.VideoThumbnailsRangeSelectorView
+import org.signal.mediasend.screens.edit.video.VideoTrimData
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.contacts.paged.ContactSearchKey
 import org.thoughtcrime.securesms.conversation.MessageSendType
@@ -49,17 +54,17 @@ import org.thoughtcrime.securesms.conversation.ScheduleMessageTimePickerBottomSh
 import org.thoughtcrime.securesms.conversation.mutiselect.forward.MultiselectForwardActivity
 import org.thoughtcrime.securesms.conversation.mutiselect.forward.MultiselectForwardFragmentArgs
 import org.thoughtcrime.securesms.keyvalue.SignalStore
+import org.thoughtcrime.securesms.media.DecryptableUriMediaInput
 import org.thoughtcrime.securesms.mediasend.MediaSendActivityResult
 import org.thoughtcrime.securesms.mediasend.v2.HudCommand
 import org.thoughtcrime.securesms.mediasend.v2.MediaAnimations
 import org.thoughtcrime.securesms.mediasend.v2.MediaSelectionNavigator
 import org.thoughtcrime.securesms.mediasend.v2.MediaSelectionState
 import org.thoughtcrime.securesms.mediasend.v2.MediaSelectionViewModel
+import org.thoughtcrime.securesms.mediasend.v2.UntrustedRecords
 import org.thoughtcrime.securesms.mediasend.v2.stories.StoriesMultiselectForwardActivity
-import org.thoughtcrime.securesms.mediasend.v2.videos.VideoTrimData
-import org.thoughtcrime.securesms.mms.MediaConstraints
-import org.thoughtcrime.securesms.mms.SentMediaQuality
 import org.thoughtcrime.securesms.recipients.Recipient
+import org.thoughtcrime.securesms.safety.SafetyNumberBottomSheet
 import org.thoughtcrime.securesms.scribbles.ImageEditorFragment
 import org.thoughtcrime.securesms.util.MediaUtil
 import org.thoughtcrime.securesms.util.SystemWindowInsetsSetter
@@ -67,18 +72,20 @@ import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter
 import org.thoughtcrime.securesms.util.fragments.requireListener
 import org.thoughtcrime.securesms.util.views.TouchInterceptingFrameLayout
 import org.thoughtcrime.securesms.util.visible
+import org.thoughtcrime.securesms.video.TranscodingConfig
 import org.thoughtcrime.securesms.video.TranscodingQuality
-import org.thoughtcrime.securesms.video.videoconverter.VideoThumbnailsRangeSelectorView
 import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.microseconds
 import org.signal.core.ui.R as CoreUiR
+import org.signal.mediasend.R as MediaSendR
 
 /**
  * Allows the user to view and edit selected media.
  */
-class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), ScheduleMessageTimePickerBottomSheet.ScheduleCallback, ScheduleMessageDialogCallback, VideoThumbnailsRangeSelectorView.RangeDragListener {
+class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), ScheduleMessageTimePickerBottomSheet.ScheduleCallback, ScheduleMessageDialogCallback, VideoThumbnailsRangeSelectorView.RangeDragListener, SafetyNumberBottomSheet.Callbacks {
 
   private val sharedViewModel: MediaSelectionViewModel by viewModels(
     ownerProducer = { requireActivity() }
@@ -118,12 +125,39 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
   private var scheduledSendTime: Long? = null
   private var readyToSend = true
 
+  private val multiselectLauncher = registerForActivityResult(MultiselectForwardActivity.SelectionContract()) { keys ->
+    if (keys.isNotEmpty()) {
+      Log.d(TAG, "Performing send from multi-select activity result.")
+      performSend(keys)
+    } else {
+      readyToSend = true
+    }
+  }
+
+  private val storiesLauncher = registerForActivityResult(StoriesMultiselectForwardActivity.SelectionContract()) { keys ->
+    if (keys.isNotEmpty()) {
+      Log.d(TAG, "Performing send from stories activity result.")
+      performSend(keys)
+    } else {
+      readyToSend = true
+    }
+  }
+
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     postponeEnterTransition()
 
-    SystemWindowInsetsSetter.attach(view, viewLifecycleOwner)
+    SystemWindowInsetsSetter.attach(view, viewLifecycleOwner, WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
 
     disposables.bindTo(viewLifecycleOwner)
+
+    parentFragmentManager.setFragmentResultListener(AddMessageDialogFragment.REQUEST_KEY, viewLifecycleOwner) { _, bundle ->
+      if (bundle.getBoolean(AddMessageDialogFragment.RESULT_INCREMENT_VIEW_ONCE_STATE)) {
+        sharedViewModel.setMessage(null)
+        sharedViewModel.incrementViewOnceState()
+      } else {
+        sharedViewModel.setMessage(bundle.getCharSequence(AddMessageDialogFragment.RESULT_MESSAGE, null))
+      }
+    }
 
     callback = requireListener()
 
@@ -183,27 +217,6 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
 
     saveButton.setOnClickListener {
       sharedViewModel.sendCommand(HudCommand.SaveMedia)
-    }
-
-    val multiselectContract = MultiselectForwardActivity.SelectionContract()
-    val storiesContract = StoriesMultiselectForwardActivity.SelectionContract()
-
-    val multiselectLauncher = registerForActivityResult(multiselectContract) { keys ->
-      if (keys.isNotEmpty()) {
-        Log.d(TAG, "Performing send from multi-select activity result.")
-        performSend(keys)
-      } else {
-        readyToSend = true
-      }
-    }
-
-    val storiesLauncher = registerForActivityResult(storiesContract) { keys ->
-      if (keys.isNotEmpty()) {
-        Log.d(TAG, "Performing send from stories activity result.")
-        performSend(keys)
-      } else {
-        readyToSend = true
-      }
     }
 
     sendButton.setOnClickListener {
@@ -300,11 +313,27 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
     }
 
     emojiButton.setOnClickListener {
-      AddMessageDialogFragment.show(parentFragmentManager, sharedViewModel.state.value?.message, true)
+      sharedViewModel.state.value?.let { state ->
+        AddMessageDialogFragment.show(
+          parentFragmentManager,
+          state.message,
+          true,
+          state.selectedMedia.size == 1 && !state.isStory && !MediaUtil.isDocumentType(state.focusedMedia?.contentType),
+          sharedViewModel.destination.getRecipientSearchKey()?.recipientId
+        )
+      }
     }
 
     addMessageButton.setOnClickListener {
-      AddMessageDialogFragment.show(parentFragmentManager, sharedViewModel.state.value?.message, false)
+      sharedViewModel.state.value?.let { state ->
+        AddMessageDialogFragment.show(
+          parentFragmentManager,
+          state.message,
+          false,
+          state.selectedMedia.size == 1 && !state.isStory && !MediaUtil.isDocumentType(state.focusedMedia?.contentType),
+          sharedViewModel.destination.getRecipientSearchKey()?.recipientId
+        )
+      }
     }
 
     if (sharedViewModel.isReply) {
@@ -388,7 +417,7 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
       getString(R.string.MediaReviewFragment__photo_set_to_view_once)
     }
 
-    MediaReviewToastPopupWindow.show(controls, R.drawable.symbol_view_once_24, description)
+    MediaReviewToastPopupWindow.show(controls, CoreUiR.drawable.symbol_view_once_24, description)
   }
 
   private fun presentQualityToggleToast(state: MediaSelectionState) {
@@ -401,15 +430,15 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
       val media: Media = mediaList[0]
       if (MediaUtil.isNonGifVideo(media)) {
         if (state.quality == SentMediaQuality.HIGH) {
-          getString(R.string.MediaReviewFragment__video_set_to_high_quality)
+          getString(MediaSendR.string.MediaReviewFragment__video_set_to_high_quality)
         } else {
-          getString(R.string.MediaReviewFragment__video_set_to_standard_quality)
+          getString(MediaSendR.string.MediaReviewFragment__video_set_to_standard_quality)
         }
       } else if (MediaUtil.isImageType(media.contentType)) {
         if (state.quality == SentMediaQuality.HIGH) {
-          getString(R.string.MediaReviewFragment__photo_set_to_high_quality)
+          getString(MediaSendR.string.MediaReviewFragment__photo_set_to_high_quality)
         } else {
-          getString(R.string.MediaReviewFragment__photo_set_to_standard_quality)
+          getString(MediaSendR.string.MediaReviewFragment__photo_set_to_standard_quality)
         }
       } else {
         Log.i(TAG, "Could not display quality toggle toast for attachment of type: ${media.contentType}")
@@ -417,9 +446,9 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
       }
     } else {
       if (state.quality == SentMediaQuality.HIGH) {
-        resources.getQuantityString(R.plurals.MediaReviewFragment__items_set_to_high_quality, mediaList.size, mediaList.size)
+        resources.getQuantityString(MediaSendR.plurals.MediaReviewFragment__items_set_to_high_quality, mediaList.size, mediaList.size)
       } else {
-        resources.getQuantityString(R.plurals.MediaReviewFragment__items_set_to_standard_quality, mediaList.size, mediaList.size)
+        resources.getQuantityString(MediaSendR.plurals.MediaReviewFragment__items_set_to_standard_quality, mediaList.size, mediaList.size)
       }
     }
 
@@ -462,7 +491,15 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
           readyToSend = true
         },
         { error ->
-          callback.onSendError(error)
+          if (error is UntrustedRecords.UntrustedRecordsException) {
+            Log.w(TAG, "Send failed due to untrusted identities.")
+            hideSendProgress()
+            SafetyNumberBottomSheet
+              .forIdentityRecordsAndDestinations(error.untrustedRecords, error.destinations.toList())
+              .show(childFragmentManager)
+          } else {
+            callback.onSendError(error)
+          }
           readyToSend = true
         },
         {
@@ -471,6 +508,22 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
         }
       )
   }
+
+  private fun hideSendProgress() {
+    progressWrapper.animate().cancel()
+    progressWrapper.alpha = 0f
+    progressWrapper.visible = false
+  }
+
+  override fun sendAnywayAfterSafetyNumberChangedInBottomSheet(destinations: List<ContactSearchKey.RecipientSearchKey>) {
+    performSend(destinations)
+  }
+
+  override fun onMessageResentAfterSafetyNumberChangeInBottomSheet() {
+    error("Unsupported, we do not hand in a message id.")
+  }
+
+  override fun onCanceled() = Unit
 
   private fun presentAddMessageEntry(viewOnceState: MediaSelectionState.ViewOnceToggleState, message: CharSequence?) {
     when (viewOnceState) {
@@ -551,14 +604,14 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
       return
     }
     val uri = mediaItem.uri
-    val updatedInputInTimeline = videoTimeLine.setInput(uri)
+    val updatedInputInTimeline = videoTimeLine.setInput(uri, DecryptableUriMediaInput)
     if (updatedInputInTimeline) {
       videoTimeLine.unregisterDragListener()
     }
     val size: Long = tryGetUriSize(requireContext(), uri, Long.MAX_VALUE)
-    val maxSend = sharedViewModel.getMediaConstraints().getVideoMaxSize()
+    val maxSend = sharedViewModel.getMediaConstraints().editorVideoMaxSize
     if (size > maxSend) {
-      videoTimeLine.setTimeLimit(state.transcodingPreset.calculateMaxVideoUploadDurationInSeconds(maxSend), TimeUnit.SECONDS)
+      videoTimeLine.setTimeLimit(TranscodingConfig.calculateMaxVideoUploadDurationInSeconds(state.transcodingConfigs, state.getOrCreateVideoTrimData(uri).totalInputDurationUs.microseconds), TimeUnit.SECONDS)
     }
 
     if (state.isTouchEnabled) {
@@ -576,7 +629,7 @@ class MediaReviewFragment : Fragment(R.layout.v2_media_review_fragment), Schedul
 
     videoSizeHint.text = if (state.isVideoTrimmingVisible) {
       val seconds = trimData.getDuration().inWholeSeconds
-      val bytes = TranscodingQuality.createFromPreset(state.transcodingPreset, trimData.getDuration().inWholeMilliseconds).byteCountEstimate
+      val bytes = TranscodingQuality.createFromQualityTiers(state.transcodingConfigs, trimData.getDuration().inWholeMilliseconds).byteCountEstimate
       String.format(Locale.getDefault(), "%d:%02d • %s", seconds / 60, seconds % 60, bytes.bytes.toUnitString())
     } else {
       null

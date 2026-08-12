@@ -19,13 +19,13 @@ import org.signal.core.util.SetUtil;
 import org.signal.core.util.SqlUtil;
 import org.signal.core.util.Stopwatch;
 import org.signal.core.util.logging.Log;
-import org.thoughtcrime.securesms.attachments.AttachmentId;
+import org.signal.core.models.database.AttachmentId;
 import org.thoughtcrime.securesms.backup.proto.KeyValue;
 import org.thoughtcrime.securesms.backup.proto.SharedPreference;
 import org.thoughtcrime.securesms.backup.proto.SqlStatement;
-import org.thoughtcrime.securesms.crypto.AttachmentSecret;
-import org.thoughtcrime.securesms.crypto.ClassicDecryptingPartInputStream;
-import org.thoughtcrime.securesms.crypto.ModernDecryptingPartInputStream;
+import org.signal.core.util.crypto.AttachmentSecret;
+import org.signal.core.util.crypto.ClassicDecryptingPartInputStream;
+import org.signal.core.util.crypto.ModernDecryptingPartInputStream;
 import org.thoughtcrime.securesms.database.AttachmentTable;
 import org.thoughtcrime.securesms.database.BackupMediaSnapshotTable;
 import org.thoughtcrime.securesms.database.EmojiSearchTable;
@@ -46,7 +46,7 @@ import org.thoughtcrime.securesms.database.SenderKeyTable;
 import org.thoughtcrime.securesms.database.SenderKeySharedTable;
 import org.thoughtcrime.securesms.database.SessionTable;
 import org.thoughtcrime.securesms.database.SignedPreKeyTable;
-import org.thoughtcrime.securesms.database.StickerTable;
+import org.thoughtcrime.securesms.database.StickerTables;
 import org.thoughtcrime.securesms.database.model.AvatarPickerDatabase;
 import org.thoughtcrime.securesms.dependencies.AppDependencies;
 import org.thoughtcrime.securesms.keyvalue.KeyValueDataSet;
@@ -186,7 +186,7 @@ public class FullBackupExporter extends FullBackupBase {
           count = exportTable(table, input, outputStream, cursor -> isForNonExpiringPollMessage(input, cursor.getLong(cursor.getColumnIndexOrThrow(PollTables.PollOptionTable.POLL_ID))), null, count, estimatedCount, cancellationSignal);
         } else if (table.equals(PollTables.PollVoteTable.TABLE_NAME)) {
           count = exportTable(table, input, outputStream, cursor -> isForNonExpiringPollMessage(input, cursor.getLong(cursor.getColumnIndexOrThrow(PollTables.PollVoteTable.POLL_ID))), null, count, estimatedCount, cancellationSignal);
-        } else if (table.equals(StickerTable.TABLE_NAME)) {
+        } else if (table.equals(StickerTables.Sticker.TABLE_NAME)) {
           count = exportTable(table, input, outputStream, cursor -> true, (cursor, innerCount) -> exportSticker(attachmentSecret, cursor, outputStream, innerCount, estimatedCount), count, estimatedCount, cancellationSignal);
         } else if (!TABLE_CONTENT_BLOCKLIST.contains(table)) {
           count = exportTable(table, input, outputStream, null, null, count, estimatedCount, cancellationSignal);
@@ -238,7 +238,7 @@ public class FullBackupExporter extends FullBackupBase {
         count += getCount(input, BackupCountQueries.getGroupReceiptCount());
       } else if (table.equals(AttachmentTable.TABLE_NAME)) {
         count += getCount(input, BackupCountQueries.getAttachmentCount());
-      } else if (table.equals(StickerTable.TABLE_NAME)) {
+      } else if (table.equals(StickerTables.Sticker.TABLE_NAME)) {
         count += getCount(input, "SELECT COUNT(*) FROM " + table);
       } else if (!TABLE_CONTENT_BLOCKLIST.contains(table)) {
         count += getCount(input, "SELECT COUNT(*) FROM " + table);
@@ -497,11 +497,11 @@ public class FullBackupExporter extends FullBackupBase {
                                    long estimatedCount)
       throws IOException
   {
-    long rowId = cursor.getLong(cursor.getColumnIndexOrThrow(StickerTable.ID));
-    long size  = cursor.getLong(cursor.getColumnIndexOrThrow(StickerTable.FILE_LENGTH));
+    long rowId = cursor.getLong(cursor.getColumnIndexOrThrow(StickerTables.Sticker.ID));
+    long size  = cursor.getLong(cursor.getColumnIndexOrThrow(StickerTables.Sticker.FILE_LENGTH));
 
-    String data   = cursor.getString(cursor.getColumnIndexOrThrow(StickerTable.FILE_PATH));
-    byte[] random = cursor.getBlob(cursor.getColumnIndexOrThrow(StickerTable.FILE_RANDOM));
+    String data   = cursor.getString(cursor.getColumnIndexOrThrow(StickerTables.Sticker.FILE_PATH));
+    byte[] random = cursor.getBlob(cursor.getColumnIndexOrThrow(StickerTables.Sticker.FILE_RANDOM));
 
     if (!TextUtils.isEmpty(data) && size > 0) {
       EventBus.getDefault().post(new BackupEvent(BackupEvent.Type.PROGRESS, ++count, estimatedCount));

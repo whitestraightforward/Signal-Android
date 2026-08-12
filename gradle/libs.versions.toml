@@ -4,8 +4,8 @@
 [versions]
 # SDK & Build Versions
 buildTools = "36.0.0"
-compileSdk = "android-36.1"
-targetSdk = "35"
+compileSdk = "37"
+targetSdk = "36"
 minSdk = "23"
 ndk = "28.0.13004108"
 javaVersion = "21"
@@ -13,7 +13,6 @@ kotlinJvmTarget = "21"
 gradle = "9.2.1"
 kotlin = "2.2.20"
 android-gradle-plugin = "9.2.1"
-
 
 # Other versions
 androidx-appcompat = "1.7.1"
@@ -27,8 +26,8 @@ androidx-navigation = "2.9.8"
 androidx-navigation3-core = "1.1.4"
 androidx-core-telecom = "1.1.0-alpha04"
 androidx-window = "1.3.0"
-glide = "4.15.1"
-libsignal-client = "0.97.3"
+glide = "5.0.9"
+libsignal-client = "0.99.2"
 mp4parser = "1.9.39"
 accompanist = "0.28.0"
 nanohttpd = "2.3.1"
@@ -172,10 +171,10 @@ libsignal-client = { module = "org.signal:libsignal-client", version.ref = "libs
 libsignal-android = { module = "org.signal:libsignal-android", version.ref = "libsignal-client" }
 protobuf-gradle-plugin = { module = "com.google.protobuf:protobuf-gradle-plugin", version.ref = "protobuf-gradle-plugin" }
 signal-aesgcmprovider = "org.signal:aesgcmprovider:0.0.4"
-signal-ringrtc = "org.signal:ringrtc-android:2.69.7"
+signal-ringrtc = "org.signal:ringrtc-android:2.70.1"
 
 # Third Party
-signal-android-database-sqlcipher = "net.zetetic:sqlcipher-android:4.16.0"
+signal-android-database-sqlcipher = "net.zetetic:sqlcipher-android:4.17.0"
 greenrobot-eventbus = "org.greenrobot:eventbus:3.0.0"
 jackson-core = "com.fasterxml.jackson.core:jackson-databind:2.12.0"
 jackson-module-kotlin = "com.fasterxml.jackson.module:jackson-module-kotlin:2.12.0"

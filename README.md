@@ -1,5 +1,7 @@
 # Signal Android
 
+**App version: 8.22.2** (`canonicalVersionCode` 1733) — aligned with official [signalapp/Signal-Android v8.22.2](https://github.com/signalapp/Signal-Android/releases/tag/v8.22.2).
+
 Signal is a simple, powerful, and secure messenger that uses your phone's data connection (WiFi/4G/5G) to communicate securely.
 
 Millions of people use Signal every day for free and instantaneous communication anywhere in the world. Send and receive high-fidelity messages, participate in HD voice/video calls, and explore a growing set of new features that help you stay connected. 

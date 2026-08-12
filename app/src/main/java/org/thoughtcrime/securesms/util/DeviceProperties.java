@@ -10,9 +10,7 @@ import android.os.Build;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
-import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.dependencies.AppDependencies;
-import org.signal.core.util.ByteUnit;
 import org.signal.core.util.ServiceUtil;
 
 
@@ -21,48 +19,9 @@ import org.signal.core.util.ServiceUtil;
  */
 public final class DeviceProperties {
 
-  private static final String TAG = Log.tag(DeviceProperties.class);
-
-  /**
-   * Whether or not we believe the device has the performance capabilities to efficiently render
-   * large numbers of APNGs simultaneously.
-   */
-  public static boolean shouldAllowApngStickerAnimation(@NonNull Context context) {
-    if (RemoteConfig.newApngRenderer()) {
-      return true;
-    }
-
-    MemoryInfo memoryInfo = getMemoryInfo(context);
-    int        memoryMb   = (int) ByteUnit.BYTES.toMegabytes(memoryInfo.totalMem);
-
-    if (isLowMemoryDevice(context)) {
-      return false;
-    }
-
-    if (memoryMb < RemoteConfig.animatedStickerMinimumTotalMemoryMb()) {
-      return false;
-    }
-
-    if (getMemoryClass(context) < RemoteConfig.animatedStickerMinimumMemoryClass()) {
-      return false;
-    }
-
-    if (memoryInfo.lowMemory) {
-      Log.w(TAG, "Currently in a low-memory situation! Can't render APNG.");
-      return false;
-    }
-
-    return true;
-  }
-
   public static boolean isLowMemoryDevice(@NonNull Context context) {
     ActivityManager activityManager = ServiceUtil.getActivityManager(context);
     return activityManager.isLowRamDevice();
-  }
-
-  public static int getMemoryClass(@NonNull Context context) {
-    ActivityManager activityManager = ServiceUtil.getActivityManager(context);
-    return activityManager.getMemoryClass();
   }
 
   public static @NonNull MemoryInfo getMemoryInfo(@NonNull Context context) {
@@ -94,6 +53,20 @@ public final class DeviceProperties {
     BatteryManager batteryManager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
     if (batteryManager != null) {
       return batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+    }
+    return -1;
+  }
+
+  /**
+   * Returns the remaining battery charge in microampere-hours (µAh), or -1 if unavailable. Unlike
+   * the battery level percentage, this has fine granularity and is well-suited to measuring drain
+   * between two points in time.
+   */
+  public static int getBatteryChargeCounter(@NonNull Context context) {
+    BatteryManager batteryManager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
+    if (batteryManager != null) {
+      int value = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
+      return value > 0 ? value : -1;
     }
     return -1;
   }

@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import arrow.core.Either
 import org.signal.core.models.backup.MediaId
 import org.signal.core.util.Base64.decodeBase64
 import org.signal.core.util.EventTimer
@@ -21,14 +22,15 @@ import org.signal.core.util.Stopwatch
 import org.signal.core.util.forEach
 import org.signal.core.util.logging.Log
 import org.signal.core.util.nullIfBlank
-import org.signal.network.NetworkResult
+import org.signal.network.api.ArchiveApiV2
+import org.signal.network.service.ArchiveError
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.backup.v2.ArchivedMediaObject
-import org.thoughtcrime.securesms.backup.v2.BackupRepository
 import org.thoughtcrime.securesms.database.AttachmentTable
 import org.thoughtcrime.securesms.database.BackupMediaSnapshotTable
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.dependencies.AppDependencies
+import org.thoughtcrime.securesms.jobmanager.CoroutineJob
 import org.thoughtcrime.securesms.jobmanager.Job
 import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint
 import org.thoughtcrime.securesms.jobs.protos.ArchiveAttachmentReconciliationJobData
@@ -38,7 +40,6 @@ import org.thoughtcrime.securesms.notifications.NotificationChannels
 import org.thoughtcrime.securesms.notifications.NotificationIds
 import org.thoughtcrime.securesms.util.RemoteConfig
 import org.thoughtcrime.securesms.wallpaper.WallpaperStorage
-import org.whispersystems.signalservice.api.archive.ArchiveGetMediaItemsResponse
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 
@@ -58,7 +59,7 @@ class ArchiveAttachmentReconciliationJob private constructor(
   private var serverCursor: String?,
   private val forced: Boolean,
   parameters: Parameters
-) : Job(parameters) {
+) : CoroutineJob(parameters) {
 
   companion object {
 
@@ -81,6 +82,19 @@ class ArchiveAttachmentReconciliationJob private constructor(
       } else {
         Log.i(TAG, "Skip enqueueing reconciliation job: attempt limit exceeded.")
       }
+    }
+
+    /**
+     * Reconcile-first entry point for after a local restore. Runs a [BackupMessagesJob] (to capture a snapshot) chained into a forced reconciliation.
+     * Sets [BackupValues.localRestoreReconcilePending] so the backup holds off on the bulk attachment backfill, letting reconciliation run first. Reconciliation
+     * then clears the flag and re-triggers the backfill for whatever genuinely still needs uploading.
+     */
+    fun enqueueReconcileFirstForLocalRestore() {
+      SignalStore.backup.localRestoreReconcilePending = true
+      AppDependencies.jobManager
+        .startChain(BackupMessagesJob())
+        .then(ArchiveAttachmentReconciliationJob(forced = true))
+        .enqueue()
     }
   }
 
@@ -105,7 +119,7 @@ class ArchiveAttachmentReconciliationJob private constructor(
 
   override fun getFactoryKey(): String = KEY
 
-  override fun run(): Result {
+  override suspend fun doRun(): Result {
     if (!SignalStore.backup.hasBackupBeenUploaded) {
       Log.w(TAG, "No backup has been uploaded yet! Skipping.")
       return Result.success()
@@ -116,7 +130,7 @@ class ArchiveAttachmentReconciliationJob private constructor(
       return Result.success()
     }
 
-    if (SignalStore.backup.lastAttachmentReconciliationTime < 0) {
+    if (!forced && SignalStore.backup.lastAttachmentReconciliationTime < 0) {
       Log.w(TAG, "First ever time we're attempting a reconciliation. Setting the last sync time to now, so we'll run at the proper interval. Skipping this iteration.", true)
       SignalStore.backup.lastAttachmentReconciliationTime = System.currentTimeMillis()
       return Result.success()
@@ -138,10 +152,27 @@ class ArchiveAttachmentReconciliationJob private constructor(
     // we use to determine which attachments need to be re-uploaded will possibly result in us unnecessarily re-uploading attachments.
     snapshotVersion = snapshotVersion ?: SignalDatabase.backupMediaSnapshots.getCurrentSnapshotVersion()
 
-    return syncDataFromCdn(snapshotVersion!!) ?: Result.success()
+    syncDataFromCdn(snapshotVersion!!)?.let { return it }
+
+    clearPendingLocalRestoreReconcile()
+    return Result.success()
   }
 
-  override fun onFailure() = Unit
+  /**
+   * Once a reconciliation has fully crawled the CDN, any media that was already archived has been marked finished, so the bulk backfill that was held off
+   * during a local restore can proceed for whatever genuinely still needs uploading.
+   */
+  private fun clearPendingLocalRestoreReconcile() {
+    if (SignalStore.backup.localRestoreReconcilePending) {
+      Log.i(TAG, "Local restore reconciliation complete. Clearing the pending flag and enqueueing a backup to upload any remaining media.", true)
+      SignalStore.backup.localRestoreReconcilePending = false
+      BackupMessagesJob.enqueue()
+    }
+  }
+
+  override fun onFailure() {
+    clearPendingLocalRestoreReconcile()
+  }
 
   /**
    * Fetches all attachment metadata from the archive CDN and ensures that our local store is in sync with it.
@@ -151,7 +182,7 @@ class ArchiveAttachmentReconciliationJob private constructor(
    * (2) We ensure that our local store has the correct CDN for any attachments on the CDN (they should only really fall out of sync when you restore a backup
    *     that was made before all of the attachments had been uploaded).
    */
-  private fun syncDataFromCdn(snapshotVersion: Long): Result? {
+  private suspend fun syncDataFromCdn(snapshotVersion: Long): Result? {
     val stopwatch = Stopwatch("sync")
     val eventTimer = EventTimer()
     val pendingRemoteDeletes: MutableSet<ArchivedMediaObject> = mutableSetOf()
@@ -302,10 +333,12 @@ class ArchiveAttachmentReconciliationJob private constructor(
    * - Mark that page as seen on the remote.
    * - Fix any CDN mismatches by updating our local store with the correct CDN.
    * - Delete any orphaned attachments that are on the CDN but not in our local store.
+   * - During the local-restore reconcile-first flow, mark media confirmed present on the CDN as finished. A local restore resets everything to NONE (we don't
+   *   trust the backup's CDN claims), so this is what promotes the media that genuinely is on the CDN back to finished, preventing a needless re-upload of it.
    *
    * @return A list of media objects that should be deleted (after being verified)
    */
-  private fun syncCdnPage(archivedItemPage: ArchiveGetMediaItemsResponse, currentSnapshotVersion: Long): Set<ArchivedMediaObject> {
+  private fun syncCdnPage(archivedItemPage: ArchiveApiV2.MediaItemsPage, currentSnapshotVersion: Long): Set<ArchivedMediaObject> {
     val mediaObjects = archivedItemPage.storedMediaObjects.map {
       ArchivedMediaObject(
         mediaId = it.mediaId,
@@ -329,6 +362,13 @@ class ArchiveAttachmentReconciliationJob private constructor(
       }
     }
 
+    if (SignalStore.backup.localRestoreReconcilePending) {
+      val markedFinished = SignalDatabase.attachments.setArchiveFinishedForMatchingMediaObjects(mediaObjectsOnBothRemoteAndLocal.toSet())
+      if (markedFinished > 0) {
+        Log.i(TAG, "Marked $markedFinished media object group(s) as finished after confirming they are present on the CDN.", true)
+      }
+    }
+
     return mediaOnRemoteButNotLocal
   }
 
@@ -336,25 +376,32 @@ class ArchiveAttachmentReconciliationJob private constructor(
    * Fetches a page of archived media items from the CDN.
    *
    * @param cursor The cursor to use for pagination, or null to start from the beginning.
-   * @return The [ArchiveGetMediaItemsResponse] if successful, or null with a [Result] indicating the failure reason.
+   * @return The [ArchiveApiV2.MediaItemsPage] if successful, or null with a [Result] indicating the failure reason.
    */
-  private fun getRemoteArchiveItemPage(cursor: String?): Pair<ArchiveGetMediaItemsResponse?, Result?> {
-    return when (val result = BackupRepository.listRemoteMediaObjects(CDN_FETCH_LIMIT, cursor)) {
-      is NetworkResult.Success -> result.result to null
-      is NetworkResult.NetworkError -> return null to Result.retry(defaultBackoff())
-      is NetworkResult.StatusCodeError -> {
-        if (result.code == 429) {
-          Log.w(TAG, "Rate limited while attempting to list media objects. Retrying later.", true)
-          return null to Result.retry(result.retryAfter()?.inWholeMilliseconds ?: defaultBackoff())
-        } else {
-          Log.w(TAG, "Failed to list remote media objects with code: ${result.code}. Unable to proceed.", result.getCause(), true)
-          return null to Result.failure()
-        }
-      }
+  private suspend fun getRemoteArchiveItemPage(cursor: String?): Pair<ArchiveApiV2.MediaItemsPage?, Result?> {
+    return when (val result = AppDependencies.archiveService.listRemoteMediaObjects(CDN_FETCH_LIMIT, cursor)) {
+      is Either.Right -> result.value to null
+      is Either.Left -> when (val error = result.value) {
+        is ArchiveError.NetworkError -> null to Result.retry(defaultBackoff())
 
-      is NetworkResult.ApplicationError -> {
-        Log.w(TAG, "Failed to list remote media objects due to a crash.", result.getCause(), true)
-        return null to Result.fatalFailure(RuntimeException(result.getCause()))
+        is ArchiveError.CredentialError.RateLimited -> {
+          Log.w(TAG, "Rate limited while attempting to list media objects. Retrying later.", true)
+          null to Result.retry(error.retryAfter?.inWholeMilliseconds ?: defaultBackoff())
+        }
+
+        is ArchiveError.ApplicationError -> {
+          Log.w(TAG, "Failed to list remote media objects due to a crash.", error.exception, true)
+          null to Result.fatalFailure(RuntimeException(error.exception))
+        }
+
+        is ArchiveError.CredentialError.Unauthorized,
+        is ArchiveError.EntitlementError.NotEntitled,
+        is ArchiveError.CredentialError.NotFound,
+        is ArchiveError.CredentialError.InvalidRequest,
+        is ArchiveError.CredentialError.ZkVerificationFailed -> {
+          Log.w(TAG, "Failed to list remote media objects: ${error::class.simpleName}. Unable to proceed.", error.cause, true)
+          null to Result.failure()
+        }
       }
     }
   }
@@ -368,7 +415,7 @@ class ArchiveAttachmentReconciliationJob private constructor(
    *
    * @return A non-successful [Result] in the case of failure, otherwise null for success.
    */
-  private fun validateAndDeleteFromRemote(deletes: Set<ArchivedMediaObject>): Result? {
+  private suspend fun validateAndDeleteFromRemote(deletes: Set<ArchivedMediaObject>): Result? {
     if (RemoteConfig.internalUser) {
       val mediaIds = deletes.take(250).map { MediaId(it.mediaId.decodeBase64()!!) }
       Log.w(TAG, "Want to delete (showing ${mediaIds.size}/${deletes.size}): ${mediaIds.take(250).joinToString() }")

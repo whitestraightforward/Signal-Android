@@ -98,7 +98,6 @@ public class IncomingCallActionProcessor extends DeviceAwareActionProcessor {
     }
 
     byte            dredDuration    = (byte) RemoteConfig.dredDuration();
-    boolean         enableVp9       = RemoteConfig.enableSoftwareVp9();
     boolean         hideIp          = !activePeer.getRecipient().isProfileSharing() || callSetupState.isAlwaysTurnServers();
     VideoState      videoState      = currentState.getVideoState();
     CallParticipant callParticipant = Objects.requireNonNull(currentState.getCallInfoState().getRemoteCallParticipant(activePeer.getRecipient()));
@@ -108,6 +107,7 @@ public class IncomingCallActionProcessor extends DeviceAwareActionProcessor {
                                                 context,
                                                 videoState.getLockableEglBase().require(),
                                                 RingRtcDynamicConfiguration.getAudioConfig(),
+                                                RingRtcDynamicConfiguration.getVideoConfig(),
                                                 videoState.requireLocalSink(),
                                                 callParticipant.getVideoSink(),
                                                 videoState.requireRouter(),
@@ -116,7 +116,6 @@ public class IncomingCallActionProcessor extends DeviceAwareActionProcessor {
                                                 NetworkUtil.getCallingDataMode(context),
                                                 AUDIO_LEVELS_INTERVAL,
                                                 dredDuration,
-                                                enableVp9,
                                                 false);
     } catch (CallException e) {
       return callFailure(currentState, "Unable to proceed with call: ", e);
@@ -153,6 +152,7 @@ public class IncomingCallActionProcessor extends DeviceAwareActionProcessor {
     currentState = currentState.builder()
                                .changeCallSetupState(activePeer.getCallId())
                                .acceptWithVideo(answerWithVideo)
+                               .accepted(true)
                                .build();
 
     try {
@@ -169,6 +169,11 @@ public class IncomingCallActionProcessor extends DeviceAwareActionProcessor {
 
     if (activePeer.getState() != CallState.LOCAL_RINGING) {
       Log.w(TAG, "Can only deny from ringing!");
+      return currentState;
+    }
+
+    if (currentState.getCallSetupState(activePeer).isAccepted()) {
+      Log.w(TAG, "Cannot deny after call has been accepted!");
       return currentState;
     }
 
@@ -194,10 +199,15 @@ public class IncomingCallActionProcessor extends DeviceAwareActionProcessor {
 
   @Override
   protected @NonNull WebRtcServiceState handleSetIncomingRingingVanity(@NonNull WebRtcServiceState currentState, boolean enabled) {
-    RemotePeer activePeer = currentState.getCallInfoState().requireActivePeer();
-    boolean    isVideoOffer = currentState.getCallSetupState(activePeer).isRemoteVideoOffer();
+    RemotePeer     activePeer     = currentState.getCallInfoState().requireActivePeer();
+    CallSetupState callSetupState = currentState.getCallSetupState(activePeer);
 
-    if (!isVideoOffer) {
+    if (!callSetupState.isRemoteVideoOffer()) {
+      return currentState;
+    }
+
+    if (callSetupState.isAccepted()) {
+      Log.w(TAG, "handleSetIncomingRingingVanity(): call has already been accepted, ignoring");
       return currentState;
     }
 
@@ -241,9 +251,10 @@ public class IncomingCallActionProcessor extends DeviceAwareActionProcessor {
     SignalDatabase.calls().insertOneToOneCall(remotePeer.getCallId().longValue(),
                                               System.currentTimeMillis(),
                                               remotePeer.getId(),
-                                      currentState.getCallSetupState(activePeer).isRemoteVideoOffer() ? CallTable.Type.VIDEO_CALL : CallTable.Type.AUDIO_CALL,
+                                              currentState.getCallSetupState(activePeer).isRemoteVideoOffer() ? CallTable.Type.VIDEO_CALL : CallTable.Type.AUDIO_CALL,
                                               CallTable.Direction.INCOMING,
-                                              CallTable.Event.ONGOING);
+                                              CallTable.Event.ONGOING,
+                                              false);
 
     if (!shouldDisturbUserWithCall) {
       Log.i(TAG, "Silently ignoring call due to mute settings.");

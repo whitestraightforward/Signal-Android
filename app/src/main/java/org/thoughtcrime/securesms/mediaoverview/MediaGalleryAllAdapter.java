@@ -34,7 +34,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.stream.Collectors;
 import com.bumptech.glide.RequestManager;
-import org.codewaves.stickyheadergrid.StickyHeaderGridAdapter;
+import com.codewaves.stickyheadergrid.StickyHeaderGridAdapter;
 
 import org.json.JSONArray;
 import org.json.JSONException;

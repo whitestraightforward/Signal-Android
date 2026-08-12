@@ -11,6 +11,7 @@ import org.signal.core.util.gibiBytes
 import org.signal.core.util.kibiBytes
 import org.signal.core.util.logging.Log
 import org.signal.core.util.mebiBytes
+import org.signal.core.util.serialization.SignalJson
 import org.thoughtcrime.securesms.dependencies.AppDependencies
 import org.thoughtcrime.securesms.groups.SelectionLimits
 import org.thoughtcrime.securesms.jobs.RemoteConfigRefreshJob
@@ -545,6 +546,25 @@ object RemoteConfig {
     )
   }
 
+  private fun remoteStringSet(
+    key: String,
+    defaultValue: Set<String>,
+    hotSwappable: Boolean,
+    active: Boolean = true,
+    onChangeListener: OnFlagChange? = null
+  ): Config<Set<String>> {
+    return remoteValue(
+      key = key,
+      hotSwappable = hotSwappable,
+      sticky = false,
+      active = active,
+      onChangeListener = onChangeListener,
+      transformer = { value ->
+        value?.let { SignalJson.decode<Set<String>>(it.toString()).getOrNull() } ?: defaultValue
+      }
+    )
+  }
+
   private fun <T> remoteValue(
     key: String,
     hotSwappable: Boolean,
@@ -602,6 +622,15 @@ object RemoteConfig {
   val pinnedChatLimit: Int by remoteInt(
     key = "global.pinnedChatLimit",
     defaultValue = 4,
+    hotSwappable = true
+  )
+
+  /** The maximum number of linked devices a user can have. */
+  @JvmStatic
+  @get:JvmName("maxLinkedDevices")
+  val maxLinkedDevices: Int by remoteInt(
+    key = "global.maxLinkedDevices",
+    defaultValue = 5,
     hotSwappable = true
   )
 
@@ -719,24 +748,6 @@ object RemoteConfig {
     hotSwappable = true
   )
 
-  /** The minimum memory class required for rendering animated stickers in the keyboard and such  */
-  @JvmStatic
-  @get:JvmName("animatedStickerMinimumMemoryClass")
-  val animatedStickerMinimumMemoryClass: Int by remoteInt(
-    key = "android.animatedStickerMinMemory",
-    defaultValue = 193,
-    hotSwappable = true
-  )
-
-  /** The minimum total memory for rendering animated stickers in the keyboard and such  */
-  @JvmStatic
-  @get:JvmName("animatedStickerMinimumTotalMemoryMb")
-  val animatedStickerMinimumTotalMemoryMb: Int by remoteInt(
-    key = "android.animatedStickerMinTotalMemory",
-    defaultValue = 3.gibiBytes.inWholeMebiBytes.toInt(),
-    hotSwappable = true
-  )
-
   @JvmStatic
   val mediaQualityLevels: String by remoteString(
     key = "android.mediaQuality.levels",
@@ -837,13 +848,6 @@ object RemoteConfig {
   /** A comma-separated list of manufacturers that *should* use Telecom for calling.  */
   val telecomModelBlocklist: String by remoteString(
     key = "android.calling.telecomModelBlockList",
-    defaultValue = "",
-    hotSwappable = true
-  )
-
-  /** A comma-separated list of manufacturers that should *not* use CameraX.  */
-  val cameraXModelBlocklist: String by remoteString(
-    key = "android.cameraXModelBlockList.3",
     defaultValue = "",
     hotSwappable = true
   )
@@ -976,7 +980,7 @@ object RemoteConfig {
   @get:JvmName("maxSourceTranscodeVideoSizeBytes")
   val maxSourceTranscodeVideoSizeBytes: Long by remoteLong(
     key = "android.media.sourceTranscodeVideo.maxBytes",
-    defaultValue = 500L.mebiBytes.inWholeBytes,
+    defaultValue = 1.gibiBytes.inWholeBytes,
     hotSwappable = true
   )
 
@@ -1165,14 +1169,6 @@ object RemoteConfig {
   )
 
   @JvmStatic
-  @get:JvmName("useHevcEncoder")
-  val useHevcEncoder: Boolean by remoteBoolean(
-    key = "android.useHevcEncoder",
-    defaultValue = false,
-    hotSwappable = false
-  )
-
-  @JvmStatic
   @get:JvmName("useMessageSendRestFallback")
   val useMessageSendRestFallback: Boolean by remoteBoolean(
     key = "android.useMessageSendRestFallback.2",
@@ -1263,17 +1259,6 @@ object RemoteConfig {
   )
 
   /**
-   * Whether or not to allow 1:1 polls and a higher character limit for questions
-   */
-  @JvmStatic
-  @get:JvmName("pollsV2")
-  val pollsV2: Boolean by remoteBoolean(
-    key = "android.pollsV2",
-    defaultValue = false,
-    hotSwappable = true
-  )
-
-  /**
    * Whether or not to receive admin delete messages.
    */
   @JvmStatic
@@ -1290,7 +1275,7 @@ object RemoteConfig {
   @JvmStatic
   @get:JvmName("sendAdminDelete")
   val sendAdminDelete: Boolean by remoteBoolean(
-    key = "android.sendAdminDelete",
+    key = "android.sendAdminDelete.2",
     defaultValue = false,
     hotSwappable = true
   )
@@ -1326,23 +1311,69 @@ object RemoteConfig {
   )
 
   /**
-   * Enables software Vp9 support for 1:1 calls
+   * Enables software Vp9 encode support for 1:1 calls
+   * Contains SoCs that are capable of encoding VP9
    */
   @JvmStatic
-  @get:JvmName("enableSoftwareVp9")
-  val enableSoftwareVp9: Boolean by remoteBoolean(
-    key = "android.calling.enableSoftwareVp9",
+  @get:JvmName("enableSoftwareVp9EncodeSoCList")
+  val enableSoftwareVp9EncodeSoCList: Set<String> by remoteStringSet(
+    key = "android.calling.enableSoftwareVp9EncodeSocList",
+    defaultValue = setOf(),
+    hotSwappable = true
+  )
+
+  /**
+   * Enables software Vp9 decode support for 1:1 calls
+   * Contains SoCs that are capable of decoding VP9
+   */
+  @JvmStatic
+  @get:JvmName("enableSoftwareVp9DecodeSoCList")
+  val enableSoftwareVp9DecodeSoCList: Set<String> by remoteStringSet(
+    key = "android.calling.enableSoftwareVp9DecodeSoCList",
+    defaultValue = setOf(),
+    hotSwappable = true
+  )
+
+  /**
+   * Enables software Vp9 decode support for 1:1 calls for all devices
+   */
+  @JvmStatic
+  @get:JvmName("enableSoftwareVp9Decode")
+  val enableSoftwareVp9Decode: Boolean by remoteBoolean(
+    key = "android.calling.enableSoftwareVp9Decode",
     defaultValue = false,
     hotSwappable = true
   )
 
   /**
-   * Whether or not to allow admins to terminate groups.
+   * List of devices to skip hardware VP9 on due to reliability issues
    */
   @JvmStatic
-  @get:JvmName("groupTerminateSend")
-  val groupTerminateSend: Boolean by remoteBoolean(
-    key = "android.groupTerminateSend",
+  @get:JvmName("disableHardwareVp9EncodeSocList")
+  val disableHardwareVp9EncodeSocList: Set<String> by remoteStringSet(
+    key = "android.calling.disableHardwareVp9EncodeSocList",
+    defaultValue = setOf(),
+    hotSwappable = true
+  )
+
+  /**
+   * List of devices to skip hardware VP9 on due to reliability issues
+   */
+  @JvmStatic
+  @get:JvmName("disableHardwareVp9DecodeSocList")
+  val disableHardwareVp9DecodeSocList: Set<String> by remoteStringSet(
+    key = "android.calling.disableHardwareVp9DecodeSocList",
+    defaultValue = setOf(),
+    hotSwappable = true
+  )
+
+  /**
+   * Enables using VP9 in Group Calls
+   */
+  @JvmStatic
+  @get:JvmName("enableGroupCallVp9")
+  val enableGroupCallVp9: Boolean by remoteBoolean(
+    key = "android.calling.enableGroupCallVp9",
     defaultValue = false,
     hotSwappable = true
   )
@@ -1356,17 +1387,6 @@ object RemoteConfig {
     key = "android.collapseEvents.2",
     defaultValue = false,
     hotSwappable = true
-  )
-
-  /**
-   * Whether to use the new custom APNG renderer instead of the existing third-party library.
-   */
-  @JvmStatic
-  @get:JvmName("newApngRenderer")
-  val newApngRenderer: Boolean by remoteBoolean(
-    key = "android.newApngRenderer",
-    defaultValue = false,
-    hotSwappable = false
   )
 
   /**
@@ -1398,17 +1418,6 @@ object RemoteConfig {
   @get:JvmName("exactAlarm")
   val exactAlarm: Boolean by remoteBoolean(
     key = "android.exactAlarm",
-    defaultValue = false,
-    hotSwappable = true
-  )
-
-  /**
-   * Whether to use our custom [org.signal.core.util.Linkifier] for web URL detection.
-   */
-  @JvmStatic
-  @get:JvmName("useNewLinkifier")
-  val useNewLinkifier: Boolean by remoteBoolean(
-    key = "android.useNewLinkifier",
     defaultValue = false,
     hotSwappable = true
   )
@@ -1449,7 +1458,34 @@ object RemoteConfig {
   @JvmStatic
   @get:JvmName("disappearMore")
   val disappearMore: Boolean by remoteBoolean(
-    key = "android.disappearMore",
+    key = "android.disappearMore.2",
+    defaultValue = false,
+    hotSwappable = true
+  )
+
+  /** A json string representing possible transcoding configurations for videos */
+  @JvmStatic
+  @get:JvmName("transcodeConfig")
+  val transcodeConfig: String by remoteString(
+    key = "client.attachments.videoTranscodingConfiguration",
+    defaultValue = "",
+    hotSwappable = true
+  )
+
+  /** The maximum allowed difference, in seconds, between our local clock and the server's clock before we block the app and prompt the user to fix their clock. */
+  @JvmStatic
+  @get:JvmName("maxAllowedClockSkewSeconds")
+  val maxAllowedClockSkewSeconds: Long by remoteLong(
+    key = "client.maxAllowedClockSkewSeconds",
+    defaultValue = 24.hours.inWholeSeconds,
+    hotSwappable = true
+  )
+
+  /** Whether to utilize the new media-send feature module */
+  @JvmStatic
+  @get:JvmName("useNewMediaSendFlow")
+  val useNewMediaSendFlow: Boolean by remoteBoolean(
+    key = "android.useNewMediaSendFlow",
     defaultValue = false,
     hotSwappable = true
   )

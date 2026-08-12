@@ -8,36 +8,41 @@ package org.signal.registration.sample.debug
 import kotlinx.coroutines.flow.Flow
 import org.signal.core.models.AccountEntropyPool
 import org.signal.core.models.MasterKey
+import org.signal.core.models.ServiceId.ACI
 import org.signal.core.util.logging.Log
 import org.signal.libsignal.net.RequestResult
+import org.signal.network.api.RegistrationApiV2.AccountAttributes
+import org.signal.network.api.RegistrationApiV2.CheckSvrCredentialsError
+import org.signal.network.api.RegistrationApiV2.CheckSvrCredentialsResponse
+import org.signal.network.api.RegistrationApiV2.CreateSessionError
+import org.signal.network.api.RegistrationApiV2.DeviceAttributes
+import org.signal.network.api.RegistrationApiV2.GetSessionStatusError
+import org.signal.network.api.RegistrationApiV2.LinkDeviceResponse
+import org.signal.network.api.RegistrationApiV2.PreKeyCollection
+import org.signal.network.api.RegistrationApiV2.RegisterAccountError
+import org.signal.network.api.RegistrationApiV2.RegisterAccountResponse
+import org.signal.network.api.RegistrationApiV2.RegisterAsLinkedDeviceError
+import org.signal.network.api.RegistrationApiV2.RequestVerificationCodeError
+import org.signal.network.api.RegistrationApiV2.RestoreMethod
+import org.signal.network.api.RegistrationApiV2.SessionMetadata
+import org.signal.network.api.RegistrationApiV2.SetRestoreMethodError
+import org.signal.network.api.RegistrationApiV2.SubmitVerificationCodeError
+import org.signal.network.api.RegistrationApiV2.SvrCredentials
+import org.signal.network.api.RegistrationApiV2.UpdateSessionError
+import org.signal.network.api.RegistrationApiV2.VerificationCodeTransport
+import org.signal.registration.LinkAndSyncWaitResult
 import org.signal.registration.NetworkController
-import org.signal.registration.NetworkController.AccountAttributes
 import org.signal.registration.NetworkController.BackupMasterKeyError
-import org.signal.registration.NetworkController.CheckSvrCredentialsError
-import org.signal.registration.NetworkController.CheckSvrCredentialsResponse
-import org.signal.registration.NetworkController.CreateSessionError
 import org.signal.registration.NetworkController.GetBackupInfoError
 import org.signal.registration.NetworkController.GetBackupInfoResponse
-import org.signal.registration.NetworkController.GetSessionStatusError
 import org.signal.registration.NetworkController.GetSvrCredentialsError
 import org.signal.registration.NetworkController.MasterKeyResponse
-import org.signal.registration.NetworkController.PreKeyCollection
 import org.signal.registration.NetworkController.ProvisioningEvent
-import org.signal.registration.NetworkController.RegisterAccountError
-import org.signal.registration.NetworkController.RegisterAccountResponse
-import org.signal.registration.NetworkController.RequestVerificationCodeError
 import org.signal.registration.NetworkController.RestoreAccountRecordError
 import org.signal.registration.NetworkController.RestoreMasterKeyError
-import org.signal.registration.NetworkController.RestoreMethod
-import org.signal.registration.NetworkController.SessionMetadata
 import org.signal.registration.NetworkController.SetAccountAttributesError
 import org.signal.registration.NetworkController.SetProfileError
 import org.signal.registration.NetworkController.SetRegistrationLockError
-import org.signal.registration.NetworkController.SetRestoreMethodError
-import org.signal.registration.NetworkController.SubmitVerificationCodeError
-import org.signal.registration.NetworkController.SvrCredentials
-import org.signal.registration.NetworkController.UpdateSessionError
-import org.signal.registration.NetworkController.VerificationCodeTransport
 import java.util.Locale
 
 /**
@@ -79,7 +84,7 @@ class DebugNetworkController(
   }
 
   override suspend fun updateSession(
-    sessionId: String?,
+    sessionId: String,
     pushChallengeToken: String?,
     captchaToken: String?
   ): RequestResult<SessionMetadata, UpdateSessionError> {
@@ -246,7 +251,35 @@ class DebugNetworkController(
     return delegate.startProvisioning()
   }
 
-  override fun startNewDeviceTransferServer(context: android.content.Context, aep: org.signal.core.models.AccountEntropyPool) {
+  override fun startLinkDeviceProvisioning(allowLinkAndSync: Boolean): Flow<NetworkController.LinkDeviceProvisioningEvent> {
+    return delegate.startLinkDeviceProvisioning(allowLinkAndSync)
+  }
+
+  override suspend fun registerAsLinkedDevice(
+    aci: ACI,
+    password: String,
+    provisioningCode: String,
+    deviceAttributes: DeviceAttributes,
+    aciPreKeys: PreKeyCollection,
+    pniPreKeys: PreKeyCollection?,
+    fcmToken: String?
+  ): RequestResult<LinkDeviceResponse, RegisterAsLinkedDeviceError> {
+    return delegate.registerAsLinkedDevice(aci, password, provisioningCode, deviceAttributes, aciPreKeys, pniPreKeys, fcmToken)
+  }
+
+  override suspend fun onLinkedDeviceRegistered() {
+    delegate.onLinkedDeviceRegistered()
+  }
+
+  override suspend fun awaitLinkAndSyncArchive(): LinkAndSyncWaitResult {
+    return delegate.awaitLinkAndSyncArchive()
+  }
+
+  override suspend fun restoreLinkedDeviceFromStorageService() {
+    delegate.restoreLinkedDeviceFromStorageService()
+  }
+
+  override fun startNewDeviceTransferServer(context: android.content.Context, aep: AccountEntropyPool) {
     if (NetworkDebugState.fakeDeviceTransfer.value) {
       Log.d(TAG, "[startNewDeviceTransferServer] Fake device transfer enabled (debug override)")
       org.signal.registration.sample.dependencies.FakeDeviceTransferRunner.start()
@@ -281,5 +314,13 @@ class DebugNetworkController(
       return it
     }
     return delegate.getBackupFileLastModified(aep, backupInfo)
+  }
+
+  override suspend fun verifyBackupKeyAssociatedWithAccount(aep: AccountEntropyPool): RequestResult<Unit, NetworkController.VerifyBackupKeyError> {
+    NetworkDebugState.getOverride<RequestResult<Unit, NetworkController.VerifyBackupKeyError>>("verifyBackupKeyAssociatedWithAccount")?.let {
+      Log.d(TAG, "[verifyBackupKeyAssociatedWithAccount] Returning debug override")
+      return it
+    }
+    return delegate.verifyBackupKeyAssociatedWithAccount(aep)
   }
 }

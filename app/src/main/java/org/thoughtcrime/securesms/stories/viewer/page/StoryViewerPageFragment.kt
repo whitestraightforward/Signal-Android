@@ -52,6 +52,7 @@ import org.signal.core.ui.permissions.Permissions
 import org.signal.core.util.Debouncer
 import org.signal.core.util.DimensionUnit
 import org.signal.core.util.ServiceUtil
+import org.signal.core.util.addDetectedLinks
 import org.signal.core.util.concurrent.LifecycleDisposable
 import org.signal.core.util.dp
 import org.signal.core.util.getParcelableCompat
@@ -72,7 +73,7 @@ import org.thoughtcrime.securesms.conversation.mutiselect.forward.MultiselectFor
 import org.thoughtcrime.securesms.database.AttachmentTable
 import org.thoughtcrime.securesms.database.model.MmsMessageRecord
 import org.thoughtcrime.securesms.database.model.databaseprotos.BodyRangeList
-import org.thoughtcrime.securesms.mediapreview.MediaPreviewFragment
+import org.thoughtcrime.securesms.mediapreview.MediaPreviewPageFragment
 import org.thoughtcrime.securesms.mediapreview.VideoControlsDelegate
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
@@ -95,7 +96,6 @@ import org.thoughtcrime.securesms.stories.viewer.views.StoryViewsBottomSheetDial
 import org.thoughtcrime.securesms.util.AvatarUtil
 import org.thoughtcrime.securesms.util.DateUtils
 import org.thoughtcrime.securesms.util.LinkUtil
-import org.thoughtcrime.securesms.util.Linkification
 import org.thoughtcrime.securesms.util.LongClickCopySpan
 import org.thoughtcrime.securesms.util.LongClickMovementMethod
 import org.thoughtcrime.securesms.util.Projection
@@ -559,7 +559,7 @@ class StoryViewerPageFragment :
   override fun onDestroyView() {
     super.onDestroyView()
     childFragmentManager.fragments.forEach {
-      if (it is MediaPreviewFragment) {
+      if (it is MediaPreviewPageFragment) {
         it.cleanUp()
       }
     }
@@ -995,7 +995,7 @@ class StoryViewerPageFragment :
 
   fun linkifyUrlLinks(spannable: Spannable) {
     LinkifyCompat.addLinks(spannable, Linkify.EMAIL_ADDRESSES or Linkify.PHONE_NUMBERS)
-    Linkification.applyWebUrlSpans(spannable)
+    spannable.addDetectedLinks()
 
     spannable.getSpans(0, spannable.length, URLSpan::class.java).forEach { urlSpan ->
       val url = urlSpan.url
