@@ -22,7 +22,8 @@ data class FindByState(
   val filteredCountries: List<Country> = emptyList(),
   val selectedCountry: Country = supportedCountries.first(),
   val isLookupInProgress: Boolean = false,
-  val query: String = ""
+  val query: String = "",
+  val lastLookupRecord: String = ""
 ) {
   companion object {
     fun startingState(self: Recipient, mode: FindByMode): FindByState {

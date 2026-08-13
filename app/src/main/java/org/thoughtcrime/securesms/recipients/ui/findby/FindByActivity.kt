@@ -379,6 +379,17 @@ private fun Content(
       }
     )
 
+    if (state.lastLookupRecord.isNotBlank()) {
+      Text(
+        text = state.lastLookupRecord,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+          .padding(horizontal = 20.dp)
+          .padding(bottom = 8.dp)
+      )
+    }
+
     if (state.mode == FindByMode.USERNAME) {
       Text(
         text = stringResource(id = R.string.FindByActivity__enter_username_description),

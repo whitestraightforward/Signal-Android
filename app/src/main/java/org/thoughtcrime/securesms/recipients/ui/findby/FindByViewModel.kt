@@ -58,8 +58,22 @@ class FindByViewModel(
       }
     }.await()
 
-    internalState.value = state.value.copy(isLookupInProgress = false)
+    internalState.value = state.value.copy(
+      isLookupInProgress = false,
+      lastLookupRecord = formatLookupRecord(findByResult)
+    )
     return findByResult
+  }
+
+  private fun formatLookupRecord(result: FindByResult): String {
+    val mode = state.value.mode.name
+    val entry = state.value.userEntry
+    return when (result) {
+      is FindByResult.Success -> "$mode FOUND entry=$entry recipientId=${result.recipientId}"
+      is FindByResult.NotFound -> "$mode NOT_FOUND entry=$entry"
+      FindByResult.InvalidEntry -> "$mode INVALID entry=$entry"
+      FindByResult.NetworkError -> "$mode NETWORK_ERROR entry=$entry"
+    }
   }
 
   @WorkerThread
