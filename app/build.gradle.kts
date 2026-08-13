@@ -347,8 +347,9 @@ android {
         isEnable = !project.hasProperty("generateBaselineProfile")
         reset()
         include(*packagedAbis.toTypedArray())
-        // Fat/universal APKs roughly double download size. Per-ABI APKs are smaller.
-        isUniversalApk = !slimApk
+        // Debug: universal so the IDE can install one APK on any ABI (emulator or device).
+        // Release: per-ABI only unless slim is explicitly disabled.
+        isUniversalApk = true
       }
     }
 
@@ -598,12 +599,17 @@ androidComponents {
     // Starting with minSdk 23, Android leaves native libraries uncompressed.
     // Compress them so the APK on disk is much smaller (libsignal + RingRTC + SQLCipher).
     // Compress .so in every release APK (and whenever slimApk is on).
-    if (slimApk ||
-      variant.buildType == "release" ||
+    if (variant.buildType == "release" ||
       variant.name.contains("website", ignoreCase = true) ||
       variant.name.contains("github", ignoreCase = true)
     ) {
       variant.packaging.jniLibs.useLegacyPackaging.set(true)
+    }
+
+    // Optional ARM-only release: drop x86 natives (emulators need slimApk=false).
+    if (slimApkRequested && variant.buildType == "release") {
+      variant.packaging.jniLibs.excludes.add("**/x86/*.so")
+      variant.packaging.jniLibs.excludes.add("**/x86_64/*.so")
     }
 
     // Version overrides

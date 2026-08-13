@@ -555,8 +555,13 @@ public class ApplicationContext extends Application implements AppForegroundObse
         fieldTrials.put("RingRTC-AnyAddressPortsKillSwitch", "Enabled");
       }
       CallManager.initialize(this, new RingRtcLogger(), fieldTrials);
-    } catch (UnsatisfiedLinkError e) {
-      throw new AssertionError("Unable to load ringrtc library", e);
+    } catch (UnsatisfiedLinkError | NullPointerException e) {
+      String abi = android.os.Build.SUPPORTED_ABIS.length > 0 ? android.os.Build.SUPPORTED_ABIS[0] : "unknown";
+      throw new AssertionError(
+          "Unable to load RingRTC native library for ABI " + abi +
+          ". Rebuild/install an APK that includes this ABI (emulators: do not use signal.slimApk=true; " +
+          "use the x86_64 or universal debug APK).",
+          e);
     }
   }
 
