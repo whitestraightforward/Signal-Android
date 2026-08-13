@@ -331,8 +331,14 @@ android {
     buildConfigField("boolean", "TRACING_ENABLED", "false")
     buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "false")
 
-    ndk {
-      abiFilters += packagedAbis
+    // AGP rejects setting ndk.abiFilters when splits.abi is also enabled
+    // ("Conflicting configuration : 'armeabi-v7a,arm64-v8a' ...").
+    // splits.abi.include is the single source of truth for packaged ABIs.
+    // abiFilters is only used when splits are turned off (baseline profiles).
+    if (project.hasProperty("generateBaselineProfile")) {
+      ndk {
+        abiFilters += packagedAbis
+      }
     }
     resourceConfigurations += listOf()
 
