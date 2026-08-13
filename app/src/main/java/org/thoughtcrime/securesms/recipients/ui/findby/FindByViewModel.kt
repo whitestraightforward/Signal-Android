@@ -97,7 +97,7 @@ class FindByViewModel(
     val nationalNumber = stateSnapshot.userEntry.removePrefix(countryCode.toString())
 
     val e164 = "+$countryCode$nationalNumber"
-    Log.i(TAG, "Find-by-phone lookup starting. country=+$countryCode national=$nationalNumber e164=$e164")
+    Log.d(TAG, "Find-by-phone lookup starting. country=+$countryCode national=$nationalNumber e164=$e164")
 
     val findByResult = when (val result = RecipientRepository.lookup(PhoneNumber(e164))) {
       is RecipientRepository.PhoneLookupResult.InvalidPhone -> {

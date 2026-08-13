@@ -231,6 +231,11 @@ class EnterPhoneNumberFragment : LoggingFragment(R.layout.fragment_registration_
     } else {
       ViewUtil.focusAndShowKeyboard(phoneNumberInputLayout)
     }
+
+    val e164OnOpen = fragmentViewModel.phoneNumber?.toE164()
+      ?: "+${spinnerView.text}${phoneNumberInputLayout.text}"
+    Log.d(TAG, "EnterPhoneNumber screen opened. e164=$e164OnOpen")
+    android.util.Log.d("EnterPhoneNumber", "EnterPhoneNumber screen opened. e164=$e164OnOpen")
   }
 
   private fun updateCountrySelection(country: Country?) {
