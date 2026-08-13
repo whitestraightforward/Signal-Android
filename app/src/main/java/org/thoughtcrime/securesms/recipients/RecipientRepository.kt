@@ -98,7 +98,8 @@ object RecipientRepository {
       } else {
         PhoneLookupResult.Found(recipient = Recipient.resolved(result.recipientId), phone = PhoneNumber(e164))
       }
-    } catch (_: IOException) {
+    } catch (e: IOException) {
+      Log.w(TAG, "CDSI lookup failed for $e164", e)
       return LookupResult.NetworkError
     }
   }

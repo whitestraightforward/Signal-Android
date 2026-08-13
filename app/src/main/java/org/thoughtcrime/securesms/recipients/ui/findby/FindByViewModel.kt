@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.profiles.manage.UsernameRepository
 import org.thoughtcrime.securesms.recipients.PhoneNumber
 import org.thoughtcrime.securesms.recipients.Recipient
@@ -22,6 +23,10 @@ import org.thoughtcrime.securesms.util.UsernameUtil
 class FindByViewModel(
   mode: FindByMode
 ) : ViewModel() {
+
+  companion object {
+    private val TAG = Log.tag(FindByViewModel::class.java)
+  }
 
   private val internalState = mutableStateOf(
     FindByState.startingState(self = Recipient.self(), mode = mode)
@@ -78,13 +83,27 @@ class FindByViewModel(
     val nationalNumber = stateSnapshot.userEntry.removePrefix(countryCode.toString())
 
     val e164 = "+$countryCode$nationalNumber"
+    Log.i(TAG, "Find-by-phone lookup starting. country=+$countryCode national=$nationalNumber e164=$e164")
 
-    return when (val result = RecipientRepository.lookup(PhoneNumber(e164))) {
-      is RecipientRepository.PhoneLookupResult.InvalidPhone -> FindByResult.InvalidEntry
-      is RecipientRepository.PhoneLookupResult.NotFound -> FindByResult.NotFound()
-      is RecipientRepository.PhoneLookupResult.Found -> FindByResult.Success(result.recipient.id)
-      is RecipientRepository.LookupResult.NetworkError -> FindByResult.NetworkError
+    val findByResult = when (val result = RecipientRepository.lookup(PhoneNumber(e164))) {
+      is RecipientRepository.PhoneLookupResult.InvalidPhone -> {
+        Log.w(TAG, "Find-by-phone record: INVALID e164=$e164 input=${result.invalidValue}")
+        FindByResult.InvalidEntry
+      }
+      is RecipientRepository.PhoneLookupResult.NotFound -> {
+        Log.i(TAG, "Find-by-phone record: NOT_FOUND e164=$e164")
+        FindByResult.NotFound()
+      }
+      is RecipientRepository.PhoneLookupResult.Found -> {
+        Log.i(TAG, "Find-by-phone record: FOUND e164=$e164 recipientId=${result.recipient.id}")
+        FindByResult.Success(result.recipient.id)
+      }
+      is RecipientRepository.LookupResult.NetworkError -> {
+        Log.w(TAG, "Find-by-phone record: NETWORK_ERROR e164=$e164")
+        FindByResult.NetworkError
+      }
     }
+    return findByResult
   }
 
   fun filterCountries(filterBy: String) {
