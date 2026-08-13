@@ -223,6 +223,7 @@ android {
       excludes += setOf(
         "**/*.dylib",
         "**/*.dll",
+        "**/*.so.debug",
         "**/libsignal_jni_testing.so"
       )
     }
@@ -231,11 +232,16 @@ android {
         "LICENSE.txt",
         "LICENSE",
         "NOTICE",
+        "NOTICE.txt",
         "asm-license.txt",
         "META-INF/LICENSE",
         "META-INF/LICENSE.md",
+        "META-INF/LICENSE.txt",
         "META-INF/NOTICE",
+        "META-INF/NOTICE.md",
+        "META-INF/NOTICE.txt",
         "META-INF/LICENSE-notice.md",
+        "META-INF/DEPENDENCIES",
         "META-INF/AL2.0",
         "META-INF/LGPL2.1",
         "META-INF/proguard/androidx-annotations.pro",
@@ -389,7 +395,9 @@ android {
 
     getByName("release") {
       isMinifyEnabled = true
+      // Unused layouts/drawables/values only. keep.xml protects raw certs/lottie.
       isShrinkResources = true
+      isCrunchPngs = true
       proguardFiles(*buildTypes["debug"].proguardFiles.toTypedArray())
       buildConfigField("String", "BUILD_VARIANT_TYPE", "\"Release\"")
     }
@@ -583,7 +591,9 @@ androidComponents {
 
     // Starting with minSdk 23, Android leaves native libraries uncompressed.
     // Compress them so the APK on disk is much smaller (libsignal + RingRTC + SQLCipher).
+    // Compress .so in every release APK (and whenever slimApk is on).
     if (slimApk ||
+      variant.buildType == "release" ||
       variant.name.contains("website", ignoreCase = true) ||
       variant.name.contains("github", ignoreCase = true)
     ) {
