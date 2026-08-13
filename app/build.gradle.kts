@@ -66,6 +66,14 @@ val isInstrumentationTestRun = gradle.startParameter.taskNames.any { taskName ->
   lower.contains("androidtest") || lower.contains("connectedcheck")
 }
 
+// Smaller APKs by default: ARM only, no fat universal, compressed native libs.
+// Use -Psignal.slimApk=false (or signal.slimApk=false in gradle.properties) for
+// x86 emulator ABIs and a universal APK.
+val slimApk = (project.findProperty("signal.slimApk") as String?)?.toBoolean() ?: true
+val allAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+val slimAbis = listOf("armeabi-v7a", "arm64-v8a")
+val packagedAbis = if (slimApk) slimAbis else allAbis
+
 val selectableVariants = listOf(
   "nightlyProdSpinner",
   "nightlyProdPerf",
@@ -214,7 +222,8 @@ android {
     jniLibs {
       excludes += setOf(
         "**/*.dylib",
-        "**/*.dll"
+        "**/*.dll",
+        "**/libsignal_jni_testing.so"
       )
     }
     resources {
@@ -227,7 +236,13 @@ android {
         "META-INF/LICENSE.md",
         "META-INF/NOTICE",
         "META-INF/LICENSE-notice.md",
+        "META-INF/AL2.0",
+        "META-INF/LGPL2.1",
         "META-INF/proguard/androidx-annotations.pro",
+        "META-INF/*.version",
+        "META-INF/kotlin-project-structure-metadata.json",
+        "kotlin-tooling-metadata.json",
+        "DebugProbesKt.bin",
         "**/*.dylib",
         "**/*.dll",
         "**/*.proto"
@@ -311,7 +326,7 @@ android {
     buildConfigField("boolean", "LINK_DEVICE_UX_ENABLED", "false")
 
     ndk {
-      abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+      abiFilters += packagedAbis
     }
     resourceConfigurations += listOf()
 
@@ -319,8 +334,9 @@ android {
       abi {
         isEnable = !project.hasProperty("generateBaselineProfile")
         reset()
-        include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-        isUniversalApk = true
+        include(*packagedAbis.toTypedArray())
+        // Fat/universal APKs roughly double download size. Per-ABI APKs are smaller.
+        isUniversalApk = !slimApk
       }
     }
 
@@ -373,6 +389,7 @@ android {
 
     getByName("release") {
       isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(*buildTypes["debug"].proguardFiles.toTypedArray())
       buildConfigField("String", "BUILD_VARIANT_TYPE", "\"Release\"")
     }
