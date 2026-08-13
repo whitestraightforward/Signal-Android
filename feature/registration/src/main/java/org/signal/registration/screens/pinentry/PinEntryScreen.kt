@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -37,21 +39,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import org.signal.core.ui.compose.AllDevicePreviews
 import org.signal.core.ui.compose.Buttons
+import org.signal.core.ui.compose.Dialogs
 import org.signal.core.ui.compose.Previews
 import org.signal.core.ui.compose.SignalIcons
 import org.signal.registration.R
+import org.signal.registration.screens.PinVisualTransformation
 import org.signal.registration.screens.RegistrationScaffold
 import org.signal.registration.screens.TwoPaneRegistrationScaffold
 import org.signal.registration.screens.attachDebugLogHelper
+import org.signal.registration.screens.shared.ContactSupportDialog
+import org.signal.registration.test.TestTags
 
 /**
  * PIN entry screen for the registration flow.
@@ -64,8 +72,10 @@ fun PinEntryScreen(
   modifier: Modifier = Modifier
 ) {
   var pin by rememberSaveable { mutableStateOf("") }
+  var showSkipDialog by rememberSaveable { mutableStateOf(false) }
   val focusRequester = remember { FocusRequester() }
   val canSubmitPin = pin.isNotEmpty()
+  val onContactSupport: () -> Unit = { onEvent(PinEntryScreenEvents.ContactSupport) }
 
   when (val params = RegistrationScaffold.rememberLayoutParams()) {
     is RegistrationScaffold.Params.OnePane -> OnePaneLayout(
@@ -75,6 +85,8 @@ fun PinEntryScreen(
       canSubmitPin = canSubmitPin,
       focusRequester = focusRequester,
       onPinChanged = { pin = it },
+      onSkip = { showSkipDialog = true },
+      onContactSupport = onContactSupport,
       onEvent = onEvent,
       modifier = modifier
     )
@@ -86,8 +98,70 @@ fun PinEntryScreen(
       canSubmitPin = canSubmitPin,
       focusRequester = focusRequester,
       onPinChanged = { pin = it },
+      onSkip = { showSkipDialog = true },
+      onContactSupport = onContactSupport,
       onEvent = onEvent,
       modifier = modifier
+    )
+  }
+
+  if (showSkipDialog) {
+    Dialogs.SimpleAlertDialog(
+      title = stringResource(R.string.PinEntryScreen__skip_pin_entry),
+      body = stringResource(R.string.PinEntryScreen__skip_pin_entry_message),
+      confirm = stringResource(R.string.PinEntryScreen__create_new_pin),
+      dismiss = stringResource(R.string.PinEntryScreen__cancel),
+      onConfirm = {
+        showSkipDialog = false
+        onEvent(PinEntryScreenEvents.Skip)
+      },
+      onDismiss = { showSkipDialog = false }
+    )
+  }
+
+  val errorDialog: Pair<String, PinEntryScreenEvents>? = when {
+    state.dialogs.networkError -> stringResource(R.string.VerificationCodeScreen__network_error) to PinEntryScreenEvents.NetworkErrorDialogDismissed
+    state.dialogs.rateLimitedRetryAfter != null -> {
+      val message = if (state.dialogs.rateLimitedRetryAfter.isPositive()) {
+        stringResource(R.string.VerificationCodeScreen__too_many_attempts_try_again_in_s, state.dialogs.rateLimitedRetryAfter.toString())
+      } else {
+        stringResource(R.string.VerificationCodeScreen__too_many_attempts)
+      }
+      message to PinEntryScreenEvents.RateLimitedDialogDismissed
+    }
+    state.dialogs.unknownError -> stringResource(R.string.VerificationCodeScreen__an_unexpected_error_occurred) to PinEntryScreenEvents.UnknownErrorDialogDismissed
+    else -> null
+  }
+
+  errorDialog?.let { (message, dismissedEvent) ->
+    Dialogs.SimpleMessageDialog(
+      message = message,
+      dismiss = stringResource(android.R.string.ok),
+      onDismiss = { onEvent(dismissedEvent) }
+    )
+  }
+
+  if (state.showNoDataToRestoreDialog) {
+    Dialogs.SimpleAlertDialog(
+      title = "",
+      body = stringResource(R.string.PinEntryScreen__no_data_could_be_found),
+      confirm = stringResource(R.string.PinEntryScreen__create_new_pin),
+      dismiss = stringResource(R.string.PinEntryScreen__contact_support),
+      onConfirm = { onEvent(PinEntryScreenEvents.CreateNewPin) },
+      onDeny = { onEvent(PinEntryScreenEvents.ContactSupport) },
+      onDismissRequest = { onEvent(PinEntryScreenEvents.ContactSupport) },
+      properties = DialogProperties(
+        dismissOnBackPress = false,
+        dismissOnClickOutside = false
+      )
+    )
+  }
+
+  if (state.showContactSupportDialog) {
+    ContactSupportDialog(
+      subject = R.string.PinEntryScreen__contact_support_email_subject,
+      filter = R.string.PinEntryScreen__contact_support_email_filter,
+      onDismiss = { onEvent(PinEntryScreenEvents.DismissContactSupport) }
     )
   }
 
@@ -105,13 +179,17 @@ private fun OnePaneLayout(
   canSubmitPin: Boolean,
   focusRequester: FocusRequester,
   onPinChanged: (String) -> Unit,
+  onSkip: () -> Unit,
+  onContactSupport: () -> Unit,
   onEvent: (PinEntryScreenEvents) -> Unit,
   modifier: Modifier = Modifier
 ) {
   val scrollState = rememberScrollState()
 
   RegistrationScaffold(
-    modifier = modifier.fillMaxSize(),
+    modifier = modifier
+      .fillMaxSize()
+      .testTag(TestTags.PIN_ENTRY_SCREEN),
     content = {
       Box(
         modifier = modifier.fillMaxSize()
@@ -136,7 +214,7 @@ private fun OnePaneLayout(
             focusRequester = focusRequester,
             onPinChanged = onPinChanged,
             onSubmit = { onEvent(PinEntryScreenEvents.PinEntered(pin)) },
-            onNeedsHelp = { onEvent(PinEntryScreenEvents.NeedHelp) },
+            onNeedsHelp = onContactSupport,
             modifier = Modifier.fillMaxWidth()
           )
 
@@ -145,12 +223,14 @@ private fun OnePaneLayout(
           )
         }
 
-        SkipButton(
-          onSkip = { onEvent(PinEntryScreenEvents.Skip) },
-          modifier = Modifier
-            .align(Alignment.TopEnd)
-            .padding(params.edgeInset)
-        )
+        if (state.mode != PinEntryState.Mode.RegistrationLock) {
+          SkipButton(
+            onSkip = onSkip,
+            modifier = Modifier
+              .align(Alignment.TopEnd)
+              .padding(params.edgeInset)
+          )
+        }
       }
     },
     footer = {
@@ -158,6 +238,7 @@ private fun OnePaneLayout(
         params = params,
         canSubmitPin = canSubmitPin,
         isElevated = scrollState.canScrollForward,
+        loading = state.loading,
         onContinue = { onEvent(PinEntryScreenEvents.PinEntered(pin)) }
       )
     }
@@ -172,6 +253,8 @@ private fun TwoPaneLayout(
   canSubmitPin: Boolean,
   focusRequester: FocusRequester,
   onPinChanged: (String) -> Unit,
+  onSkip: () -> Unit,
+  onContactSupport: () -> Unit,
   onEvent: (PinEntryScreenEvents) -> Unit,
   modifier: Modifier = Modifier
 ) {
@@ -179,7 +262,9 @@ private fun TwoPaneLayout(
   val secondPaneScrollState = rememberScrollState()
 
   TwoPaneRegistrationScaffold(
-    modifier = modifier.fillMaxSize(),
+    modifier = modifier
+      .fillMaxSize()
+      .testTag(TestTags.PIN_ENTRY_SCREEN),
     params = params,
     firstPane = { paddingValues ->
       Column(
@@ -191,7 +276,8 @@ private fun TwoPaneLayout(
       ) {
         PinDescription(
           mode = state.mode,
-          modifier = Modifier.fillMaxWidth()
+          modifier = Modifier.fillMaxWidth(),
+          twoPane = true
         )
       }
     },
@@ -213,7 +299,7 @@ private fun TwoPaneLayout(
             focusRequester = focusRequester,
             onPinChanged = onPinChanged,
             onSubmit = { onEvent(PinEntryScreenEvents.PinEntered(pin)) },
-            onNeedsHelp = { onEvent(PinEntryScreenEvents.NeedHelp) },
+            onNeedsHelp = onContactSupport,
             modifier = Modifier.fillMaxWidth()
           )
 
@@ -222,12 +308,14 @@ private fun TwoPaneLayout(
           )
         }
 
-        SkipButton(
-          onSkip = { onEvent(PinEntryScreenEvents.Skip) },
-          modifier = Modifier
-            .align(Alignment.TopEnd)
-            .padding(params.edgeInset)
-        )
+        if (state.mode != PinEntryState.Mode.RegistrationLock) {
+          SkipButton(
+            onSkip = onSkip,
+            modifier = Modifier
+              .align(Alignment.TopEnd)
+              .padding(params.edgeInset)
+          )
+        }
       }
     },
     footer = {
@@ -235,6 +323,7 @@ private fun TwoPaneLayout(
         params = params,
         canSubmitPin = canSubmitPin,
         isElevated = firstPaneScrollState.canScrollForward || secondPaneScrollState.canScrollForward,
+        loading = state.loading,
         onContinue = { onEvent(PinEntryScreenEvents.PinEntered(pin)) }
       )
     }
@@ -244,7 +333,8 @@ private fun TwoPaneLayout(
 @Composable
 private fun PinDescription(
   mode: PinEntryState.Mode,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  twoPane: Boolean = false
 ) {
   val titleString = when (mode) {
     PinEntryState.Mode.RegistrationLock -> stringResource(R.string.PinEntryScreen__registration_lock)
@@ -255,8 +345,8 @@ private fun PinDescription(
   Column(modifier = modifier) {
     Text(
       text = titleString,
-      style = MaterialTheme.typography.headlineMedium,
-      textAlign = TextAlign.Center,
+      style = if (twoPane) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.headlineMedium,
+      textAlign = TextAlign.Start,
       modifier = Modifier
         .fillMaxWidth()
         .attachDebugLogHelper()
@@ -264,7 +354,7 @@ private fun PinDescription(
 
     Text(
       text = stringResource(R.string.PinEntryScreen__enter_the_pin_you_created),
-      style = MaterialTheme.typography.bodyLarge,
+      style = if (twoPane) MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Normal) else MaterialTheme.typography.bodyLarge,
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       textAlign = TextAlign.Start,
       modifier = Modifier.padding(top = 16.dp)
@@ -289,6 +379,7 @@ private fun PinInputField(
       onValueChange = onPinChanged,
       modifier = Modifier
         .fillMaxWidth()
+        .testTag(TestTags.PIN_ENTRY_INPUT)
         .focusRequester(focusRequester),
       textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = TextAlign.Center),
       singleLine = true,
@@ -297,18 +388,21 @@ private fun PinInputField(
         imeAction = ImeAction.Done
       ),
       keyboardActions = KeyboardActions(onDone = { if (canSubmitPin) onSubmit() }),
-      isError = state.triesRemaining != null,
-      visualTransformation = PasswordVisualTransformation()
+      isError = state.triesRemaining != null || state.enteredVerificationCode,
+      visualTransformation = PinVisualTransformation
     )
 
-    if (state.triesRemaining != null) {
-      Spacer(modifier = Modifier.height(8.dp))
+    Spacer(modifier = Modifier.height(8.dp))
+    if (state.enteredVerificationCode) {
+      PinInputLabel(
+        text = stringResource(R.string.PinEntryScreen__reentered_verification_code),
+        isError = true
+      )
+    } else if (state.triesRemaining != null) {
       PinInputLabel(
         text = pluralStringResource(R.plurals.PinEntryScreen__incorrect_pin, state.triesRemaining, state.triesRemaining),
         isError = true
       )
-    } else {
-      Spacer(modifier = Modifier.height(8.dp))
     }
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -346,7 +440,9 @@ private fun KeyboardToggleButton(
 ) {
   TextButton(
     onClick = onToggleKeyboard,
-    modifier = modifier.fillMaxWidth()
+    modifier = modifier
+      .fillMaxWidth()
+      .testTag(TestTags.PIN_ENTRY_TOGGLE_KEYBOARD_BUTTON)
   ) {
     Icon(
       painter = SignalIcons.Keyboard.painter,
@@ -362,6 +458,7 @@ private fun ContinueButton(
   params: RegistrationScaffold.Params,
   canSubmitPin: Boolean,
   isElevated: Boolean,
+  loading: Boolean,
   onContinue: () -> Unit,
   modifier: Modifier = Modifier
 ) {
@@ -375,12 +472,21 @@ private fun ContinueButton(
     ) {
       Buttons.LargeTonal(
         onClick = onContinue,
-        enabled = canSubmitPin,
+        enabled = canSubmitPin && !loading,
         modifier = Modifier
           .widthIn(max = params.maxButtonWidth)
           .padding(params.footerPadding)
+          .testTag(TestTags.PIN_ENTRY_CONTINUE_BUTTON)
       ) {
-        Text(stringResource(R.string.PinEntryScreen__continue))
+        if (loading) {
+          CircularProgressIndicator(
+            modifier = Modifier.size(24.dp),
+            strokeWidth = 3.dp,
+            color = MaterialTheme.colorScheme.primary
+          )
+        } else {
+          Text(stringResource(R.string.PinEntryScreen__continue))
+        }
       }
     }
   }
@@ -393,7 +499,7 @@ private fun SkipButton(
 ) {
   TextButton(
     onClick = onSkip,
-    modifier = modifier
+    modifier = modifier.testTag(TestTags.PIN_ENTRY_SKIP_BUTTON)
   ) {
     Text(
       text = stringResource(R.string.PinEntryScreen__skip),

@@ -111,7 +111,7 @@ annotation class TabletLandscapeNightPreview
 annotation class TabletNightPreviews
 
 @TabletDayPreviews
-@TabletLandscapeNightPreview
+@TabletNightPreviews
 annotation class TabletPreviews
 
 @PhoneNightPreviews
@@ -125,6 +125,9 @@ annotation class AllNightPreviews
 @FoldablePreviews
 @TabletPreviews
 annotation class AllDevicePreviews
+
+@Preview(name = "rtl", locale = "ar")
+annotation class RtlPreview
 
 @Preview(name = "large font", fontScale = 2f)
 annotation class LargeFontPreviews

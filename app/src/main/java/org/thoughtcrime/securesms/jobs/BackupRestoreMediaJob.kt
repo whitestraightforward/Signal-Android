@@ -5,10 +5,10 @@
 
 package org.thoughtcrime.securesms.jobs
 
+import org.signal.core.models.database.AttachmentId
 import org.signal.core.util.logging.Log
 import org.signal.core.util.withinTransaction
 import org.thoughtcrime.securesms.R
-import org.thoughtcrime.securesms.attachments.AttachmentId
 import org.thoughtcrime.securesms.backup.v2.ArchiveRestoreProgress
 import org.thoughtcrime.securesms.database.AttachmentTable
 import org.thoughtcrime.securesms.database.SignalDatabase
@@ -64,6 +64,11 @@ class BackupRestoreMediaJob private constructor(parameters: Parameters) : BaseJo
     val orphanedCount = SignalDatabase.attachments.markRestorableAttachmentsWithoutMessageAsFailed()
     if (orphanedCount > 0) {
       Log.w(TAG, "$orphanedCount orphaned restorable attachments marked failed")
+    }
+
+    val stalledCount = SignalDatabase.attachments.resetRestorableAttachmentsInProgressToNeedsRestore()
+    if (stalledCount > 0) {
+      Log.w(TAG, "$stalledCount attachments were stuck mid-restore; reset to needs-restore so they can be re-enqueued")
     }
 
     do {

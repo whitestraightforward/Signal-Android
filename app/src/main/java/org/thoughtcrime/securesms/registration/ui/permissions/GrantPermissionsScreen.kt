@@ -28,6 +28,9 @@ import org.signal.core.ui.compose.Previews
 import org.signal.registration.R
 import org.thoughtcrime.securesms.registration.ui.shared.RegistrationScreen
 
+/**
+ * Layout that explains permissions rationale to the user.
+ */
 @Composable
 fun GrantPermissionsScreen(
   deviceBuildVersion: Int,
@@ -43,11 +46,23 @@ fun GrantPermissionsScreen(
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier.fillMaxWidth()
       ) {
+        TextButton(
+          modifier = Modifier.weight(weight = 1f, fill = false),
+          onClick = onNotNowClicked
+        ) {
+          Text(
+            text = stringResource(id = R.string.GrantPermissionsFragment__not_now)
+          )
+        }
 
         Spacer(modifier = Modifier.size(24.dp))
 
-        Buttons.LargeTonal(onClick = onNextClicked) {
-          Text(text = stringResource(id = R.string.GrantPermissionsFragment__next))
+        Buttons.LargeTonal(
+          onClick = onNextClicked
+        ) {
+          Text(
+            text = stringResource(id = R.string.GrantPermissionsFragment__next)
+          )
         }
       }
     }
@@ -113,6 +128,7 @@ fun PermissionRow(
         text = title,
         style = MaterialTheme.typography.titleSmall
       )
+
       Text(
         text = subtitle,
         color = MaterialTheme.colorScheme.onSurfaceVariant

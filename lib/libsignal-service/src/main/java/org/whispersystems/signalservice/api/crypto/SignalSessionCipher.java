@@ -55,11 +55,9 @@ public class SignalSessionCipher {
     }
   }
 
-  public int getSessionVersion() {
+  public int getSessionVersion() throws NoSessionException {
     try (SignalSessionLock.Lock unused = lock.acquire()) {
       return cipher.getSessionVersion();
-    } catch (NoSessionException e) {
-      throw new RuntimeException(e);
     }
   }
 }

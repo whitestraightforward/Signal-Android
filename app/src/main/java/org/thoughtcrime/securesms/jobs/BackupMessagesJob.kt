@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import arrow.core.Either
 import okio.IOException
 import org.signal.core.models.backup.MediaRootBackupKey
 import org.signal.core.util.PendingIntentFlags
@@ -22,9 +23,9 @@ import org.signal.core.util.logging.Log
 import org.signal.core.util.logging.logW
 import org.signal.libsignal.messagebackup.BackupForwardSecrecyToken
 import org.signal.libsignal.net.SvrBStoreResponse
-import org.signal.libsignal.zkgroup.VerificationFailedException
 import org.signal.network.NetworkResult
 import org.signal.network.api.SvrBApi
+import org.signal.network.service.ArchiveError
 import org.signal.protos.resumableuploads.ResumableUpload
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.attachments.AttachmentUploadUtil
@@ -38,6 +39,7 @@ import org.thoughtcrime.securesms.backup.v2.util.getAllReferencedArchiveAttachme
 import org.thoughtcrime.securesms.database.BackupMediaSnapshotTable
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.dependencies.AppDependencies
+import org.thoughtcrime.securesms.jobmanager.CoroutineJob
 import org.thoughtcrime.securesms.jobmanager.Job
 import org.thoughtcrime.securesms.jobmanager.impl.BackupMessagesConstraint
 import org.thoughtcrime.securesms.jobs.protos.BackupMessagesJobData
@@ -48,7 +50,6 @@ import org.thoughtcrime.securesms.logsubmit.SubmitDebugLogActivity
 import org.thoughtcrime.securesms.net.SignalNetwork
 import org.thoughtcrime.securesms.notifications.NotificationChannels
 import org.thoughtcrime.securesms.notifications.NotificationIds
-import org.thoughtcrime.securesms.providers.BlobProvider
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.storage.StorageSyncHelper
 import org.thoughtcrime.securesms.util.MediaUtil
@@ -73,7 +74,7 @@ class BackupMessagesJob private constructor(
   private var dataFile: String,
   private var resumableMessagesBackupUploadSpec: ResumableMessagesBackupUploadSpec?,
   parameters: Parameters
-) : Job(parameters) {
+) : CoroutineJob(parameters) {
 
   companion object {
     private val TAG = Log.tag(BackupMessagesJob::class.java)
@@ -151,7 +152,7 @@ class BackupMessagesJob private constructor(
     }
   }
 
-  override fun run(): Result {
+  override suspend fun doRun(): Result {
     val result = doWork()
     if (result.isSuccess && !isCanceled && SignalStore.backup.optimizeStorage && SignalStore.backup.backsUpMedia) {
       AppDependencies.jobManager.add(OptimizeMediaJob())
@@ -159,7 +160,7 @@ class BackupMessagesJob private constructor(
     return result
   }
 
-  private fun doWork(): Result {
+  private suspend fun doWork(): Result {
     if (!isBackupAllowed()) {
       Log.d(TAG, "Skip running BackupMessagesJob.", true)
       return Result.success()
@@ -167,41 +168,51 @@ class BackupMessagesJob private constructor(
 
     val stopwatch = Stopwatch("BackupMessagesJob")
 
-    val auth = when (val result = BackupRepository.getSvrBAuth()) {
-      is NetworkResult.Success -> result.result
-      is NetworkResult.NetworkError -> return Result.retry(defaultBackoff()).logW(TAG, "Network error when getting SVRB auth.", result.getCause(), true)
-      is NetworkResult.StatusCodeError -> {
-        return when (result.code) {
-          429 -> Result.retry(result.retryAfter()?.inWholeMilliseconds ?: defaultBackoff()).logW(TAG, "Rate limited when getting SVRB auth.", result.getCause(), true)
-          else -> Result.retry(defaultBackoff()).logW(TAG, "Status code error when getting SVRB auth.", result.getCause(), true)
+    val auth = when (val result = AppDependencies.archiveService.getSvrBAuth()) {
+      is Either.Right -> result.value
+      is Either.Left -> when (val error = result.value) {
+        is ArchiveError.CredentialError.RateLimited -> {
+          return Result.retry(error.retryAfter?.inWholeMilliseconds ?: defaultBackoff()).logW(TAG, "Rate limited when getting SVRB auth.", error.cause, true)
+        }
+        is ArchiveError.NetworkError,
+        is ArchiveError.CredentialError.Unauthorized,
+        is ArchiveError.CredentialError.NotFound,
+        is ArchiveError.CredentialError.InvalidRequest,
+        is ArchiveError.CredentialError.ZkVerificationFailed -> {
+          return Result.retry(defaultBackoff()).logW(TAG, "Failed to get SVRB auth: ${error::class.simpleName}", error.cause, true)
+        }
+        is ArchiveError.ApplicationError -> {
+          throw error.exception
         }
       }
-      is NetworkResult.ApplicationError -> throw result.throwable
     }
 
     if (SignalStore.backup.backupSecretRestoreRequired) {
       Log.i(TAG, "[svrb-restore] First backup of re-registered account without remote restore, read remote data if available to re-init")
 
       val forwardSecrecyMetadata: ByteArray? = when (val result = BackupRepository.getRemoteBackupForwardSecrecyMetadata()) {
-        is NetworkResult.Success -> result.result
-        is NetworkResult.NetworkError -> return Result.retry(defaultBackoff()).logW(TAG, "[svrb-restore] Network error getting remote forward secrecy metadata.", result.getCause(), true)
-        is NetworkResult.StatusCodeError -> {
-          if (result.code == 401 || result.code == 403 || result.code == 404) {
+        is Either.Right -> result.value
+        is Either.Left -> when (val error = result.value) {
+          is ArchiveError.CredentialError.Unauthorized,
+          is ArchiveError.EntitlementError.NotEntitled,
+          is ArchiveError.CredentialError.NotFound -> {
             Log.i(TAG, "[svrb-restore] No backup data found, continuing.", true)
             null
-          } else {
-            return when (result.code) {
-              429 -> Result.retry(result.retryAfter()?.inWholeMilliseconds ?: defaultBackoff()).logW(TAG, "[svrb-restore] Rate limited when getting remote forward secrecy metadata.", result.getCause(), true)
-              else -> Result.retry(defaultBackoff()).logW(TAG, "[svrb-restore] Status code error when getting remote forward secrecy metadata.", result.getCause(), true)
-            }
           }
-        }
-        is NetworkResult.ApplicationError -> {
-          if (result.getCause() is VerificationFailedException) {
+          is ArchiveError.CredentialError.ZkVerificationFailed -> {
             Log.w(TAG, "[svrb-restore] zkverification failed getting backup info, continuing.", true)
             null
-          } else {
-            throw result.throwable
+          }
+          is ArchiveError.CredentialError.RateLimited -> {
+            return Result.retry(error.retryAfter?.inWholeMilliseconds ?: defaultBackoff()).logW(TAG, "[svrb-restore] Rate limited when getting remote forward secrecy metadata.", error.cause, true)
+          }
+          is ArchiveError.NetworkError,
+          is ArchiveError.CredentialError.InvalidRequest,
+          is ArchiveError.BackupFileError.UnexpectedResponse -> {
+            return Result.retry(defaultBackoff()).logW(TAG, "[svrb-restore] Failed to get remote forward secrecy metadata: ${error::class.simpleName}", error.cause, true)
+          }
+          is ArchiveError.ApplicationError -> {
+            throw error.exception
           }
         }
       }
@@ -298,40 +309,41 @@ class BackupMessagesJob private constructor(
 
     val existingSpec = resumableMessagesBackupUploadSpec
     val form: AttachmentUploadForm = if (existingSpec == null) {
-      when (val result = BackupRepository.getMessageBackupUploadForm(tempBackupFile.length())) {
-        is NetworkResult.Success -> result.result
-        is NetworkResult.NetworkError -> {
-          Log.i(TAG, "Network failure", result.getCause(), true)
-          return Result.retry(defaultBackoff())
-        }
-        is NetworkResult.StatusCodeError -> {
-          when (result.code) {
-            413 -> {
-              Log.i(TAG, "Backup file is too large! Size: ${tempBackupFile.length()} bytes. Current threshold: ${SignalStore.backup.messageCuttoffDuration}", result.getCause(), true)
-              tempBackupFile.delete()
-              this.dataFile = ""
-              BackupRepository.markBackupCreationFailed(BackupValues.BackupCreationError.BACKUP_FILE_TOO_LARGE)
-              backupErrorHandled = true
+      when (val result = AppDependencies.archiveService.getMessageBackupUploadForm(tempBackupFile.length())) {
+        is Either.Right -> result.value
+        is Either.Left -> when (val error = result.value) {
+          is ArchiveError.NetworkError -> {
+            Log.i(TAG, "Network failure", error.exception, true)
+            return Result.retry(defaultBackoff())
+          }
+          is ArchiveError.UploadFormError.TooLarge -> {
+            Log.i(TAG, "Backup file is too large! Size: ${tempBackupFile.length()} bytes. Current threshold: ${SignalStore.backup.messageCuttoffDuration}", error.cause, true)
+            tempBackupFile.delete()
+            this.dataFile = ""
+            BackupRepository.markBackupCreationFailed(BackupValues.BackupCreationError.BACKUP_FILE_TOO_LARGE)
+            backupErrorHandled = true
 
-              if (SignalStore.backup.messageCuttoffDuration == null) {
-                Log.i(TAG, "Setting message cuttoff duration to $TOO_LARGE_MESSAGE_CUTTOFF_DURATION", true)
-                SignalStore.backup.messageCuttoffDuration = TOO_LARGE_MESSAGE_CUTTOFF_DURATION
-                return Result.retry(defaultBackoff())
-              } else {
-                return Result.failure()
-              }
-            }
-            429 -> {
-              Log.i(TAG, "Rate limited when getting upload form.", result.getCause(), true)
-              return Result.retry(result.retryAfter()?.inWholeMilliseconds ?: defaultBackoff())
-            }
-            else -> {
-              Log.i(TAG, "Status code failure", result.getCause(), true)
+            if (SignalStore.backup.messageCuttoffDuration == null) {
+              Log.i(TAG, "Setting message cuttoff duration to $TOO_LARGE_MESSAGE_CUTTOFF_DURATION", true)
+              SignalStore.backup.messageCuttoffDuration = TOO_LARGE_MESSAGE_CUTTOFF_DURATION
               return Result.retry(defaultBackoff())
+            } else {
+              return Result.failure()
             }
           }
+          is ArchiveError.CredentialError.RateLimited -> {
+            Log.i(TAG, "Rate limited when getting upload form.", error.cause, true)
+            return Result.retry(error.retryAfter?.inWholeMilliseconds ?: defaultBackoff())
+          }
+          is ArchiveError.ApplicationError -> throw error.exception
+          is ArchiveError.CredentialError.Unauthorized,
+          is ArchiveError.CredentialError.NotFound,
+          is ArchiveError.CredentialError.InvalidRequest,
+          is ArchiveError.CredentialError.ZkVerificationFailed -> {
+            Log.i(TAG, "Failed to get upload form: ${error::class.simpleName}", error.cause, true)
+            return Result.retry(defaultBackoff())
+          }
         }
-        is NetworkResult.ApplicationError -> throw result.throwable
       }
     } else {
       existingSpec.attachmentUploadForm
@@ -418,7 +430,10 @@ class BackupMessagesJob private constructor(
       return Result.failure()
     }
 
-    if (SignalStore.backup.backsUpMedia && SignalDatabase.attachments.doAnyAttachmentsNeedArchiveUpload()) {
+    if (SignalStore.backup.localRestoreReconcilePending) {
+      Log.i(TAG, "A local restore reconciliation is pending. Holding off on the attachment backfill until reconciliation has marked already-archived media as finished.", true)
+      ArchiveUploadProgress.onMessageBackupFinishedEarly()
+    } else if (SignalStore.backup.backsUpMedia && SignalDatabase.attachments.doAnyAttachmentsNeedArchiveUpload()) {
       Log.i(TAG, "Enqueuing attachment backfill job.", true)
       AppDependencies.jobManager.add(ArchiveAttachmentBackfillJob())
     } else {
@@ -463,9 +478,9 @@ class BackupMessagesJob private constructor(
       }
     }
 
-    BlobProvider.getInstance().clearTemporaryBackupsDirectory(AppDependencies.application)
+    AppDependencies.blobs.clearTemporaryBackupsDirectory(AppDependencies.application)
 
-    val tempBackupFile = BlobProvider.getInstance().forTemporaryBackup(AppDependencies.application)
+    val tempBackupFile = AppDependencies.blobs.forTemporaryBackup(AppDependencies.application)
 
     val outputStream = FileOutputStream(tempBackupFile)
     val backupKey = SignalStore.backup.messageBackupKey

@@ -14,6 +14,7 @@ import org.signal.core.util.Util
 import org.signal.core.util.UuidUtil
 import org.signal.core.util.isNotEmpty
 import org.signal.core.util.orNull
+import org.signal.emoji.EmojiUtil
 import org.signal.libsignal.net.KeyTransparency
 import org.signal.libsignal.protocol.IdentityKey
 import org.signal.libsignal.protocol.IdentityKeyPair
@@ -28,7 +29,6 @@ import org.signal.ringrtc.CallLinkRootKey
 import org.thoughtcrime.securesms.attachments.Attachment
 import org.thoughtcrime.securesms.attachments.DatabaseAttachment
 import org.thoughtcrime.securesms.attachments.TombstoneAttachment
-import org.thoughtcrime.securesms.components.emoji.EmojiUtil
 import org.thoughtcrime.securesms.components.settings.app.changenumber.ChangeNumberRepository
 import org.thoughtcrime.securesms.contactshare.Contact
 import org.thoughtcrime.securesms.database.AttachmentTable
@@ -40,6 +40,7 @@ import org.thoughtcrime.securesms.database.MessageTable
 import org.thoughtcrime.securesms.database.MessageTable.MarkedMessageInfo
 import org.thoughtcrime.securesms.database.NoSuchMessageException
 import org.thoughtcrime.securesms.database.PaymentMetaDataUtil
+import org.thoughtcrime.securesms.database.RecipientTable
 import org.thoughtcrime.securesms.database.SentStorySyncManifest
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.database.model.DistributionListId
@@ -64,6 +65,7 @@ import org.thoughtcrime.securesms.dependencies.KeyTransparencyApi
 import org.thoughtcrime.securesms.groups.BadGroupIdException
 import org.thoughtcrime.securesms.groups.GroupChangeBusyException
 import org.thoughtcrime.securesms.groups.GroupId
+import org.thoughtcrime.securesms.jobs.AttachmentBackfill
 import org.thoughtcrime.securesms.jobs.AttachmentDownloadJob
 import org.thoughtcrime.securesms.jobs.AttachmentUploadJob
 import org.thoughtcrime.securesms.jobs.MultiDeviceAttachmentBackfillMissingJob
@@ -135,6 +137,7 @@ import org.whispersystems.signalservice.internal.push.EditMessage
 import org.whispersystems.signalservice.internal.push.Envelope
 import org.whispersystems.signalservice.internal.push.StoryMessage
 import org.whispersystems.signalservice.internal.push.SyncMessage
+import org.whispersystems.signalservice.internal.push.SyncMessage.AttachmentBackfillResponse
 import org.whispersystems.signalservice.internal.push.SyncMessage.Blocked
 import org.whispersystems.signalservice.internal.push.SyncMessage.CallLinkUpdate
 import org.whispersystems.signalservice.internal.push.SyncMessage.CallLogEvent
@@ -190,7 +193,7 @@ object SyncMessageProcessor {
       syncMessage.callLogEvent != null -> handleSynchronizeCallLogEvent(syncMessage.callLogEvent!!, envelope.clientTimestamp!!)
       syncMessage.deleteForMe != null -> handleSynchronizeDeleteForMe(context, syncMessage.deleteForMe!!, envelope.clientTimestamp!!, earlyMessageCacheEntry)
       syncMessage.attachmentBackfillRequest != null -> handleSynchronizeAttachmentBackfillRequest(syncMessage.attachmentBackfillRequest!!, envelope.clientTimestamp!!)
-      syncMessage.attachmentBackfillResponse != null -> warn(envelope.clientTimestamp!!, "Contains a backfill response, but we don't handle these!")
+      syncMessage.attachmentBackfillResponse != null -> handleSynchronizeAttachmentBackfillResponse(syncMessage.attachmentBackfillResponse!!, envelope.clientTimestamp!!)
       syncMessage.usernameChange != null -> handleSynchronizeUsernameChange(envelope.clientTimestamp!!)
       else -> warn(envelope.clientTimestamp!!, "Contains no known sync types...")
     }
@@ -214,11 +217,13 @@ object SyncMessageProcessor {
 
       if (sent.storyMessage != null || sent.storyMessageRecipients.isNotEmpty()) {
         handleSynchronizeSentStoryMessage(envelope, sent)
+        SignalStore.misc.lastSyncMessageSeenTimeMs = System.currentTimeMillis()
         return
       }
 
       if (sent.editMessage != null) {
         handleSynchronizeSentEditMessage(context, envelope, sent, senderRecipient, earlyMessageCacheEntry)
+        SignalStore.misc.lastSyncMessageSeenTimeMs = System.currentTimeMillis()
         return
       }
 
@@ -261,7 +266,8 @@ object SyncMessageProcessor {
         dataMessage.isMediaMessage -> threadId = handleSynchronizeSentMediaMessage(context, sent, envelope.clientTimestamp!!, senderRecipient)
         dataMessage.pollCreate != null -> threadId = handleSynchronizedPollCreate(envelope, dataMessage, sent, senderRecipient)
         dataMessage.pollVote != null -> {
-          DataMessageProcessor.handlePollVote(context, envelope, dataMessage, senderRecipient, earlyMessageCacheEntry)
+          val destination = getSyncMessageDestination(sent)
+          DataMessageProcessor.handlePollVote(context, envelope, dataMessage, senderRecipient, destination, earlyMessageCacheEntry)
           threadId = SignalDatabase.threads.getOrCreateThreadIdFor(getSyncMessageDestination(sent))
         }
         dataMessage.pollTerminate != null -> threadId = handleSynchronizedPollEnd(envelope, dataMessage, sent, senderRecipient, earlyMessageCacheEntry)
@@ -1145,12 +1151,33 @@ object SyncMessageProcessor {
   }
 
   private fun handleSynchronizeBlockedListMessage(blockMessage: Blocked, envelopeTimestamp: Long) {
-    val blockedAcis = if (blockMessage.acisBinary.isNotEmpty()) { blockMessage.acisBinary.mapNotNull { ACI.parseOrNull(it) } } else blockMessage.acis.mapNotNull { ACI.parseOrNull(it) }
-    val blockedE164s = blockMessage.numbers
-    val blockedGroupIds = blockMessage.groupIds.map { it.toByteArray() }
-    log(envelopeTimestamp, "Synchronize block message. Counts: (ACI: ${blockedAcis.size}, E164: ${blockedE164s.size}, Group: ${blockedGroupIds.size})")
+    val blockedAcis = if (blockMessage.blockedAcis.isNotEmpty()) {
+      blockMessage.blockedAcis.mapNotNull { blockedAci -> ACI.parseOrNull(blockedAci.aciBinary)?.let { aci -> RecipientTable.BlockedAci(aci, blockedAci.timestamp ?: 0) } }
+    } else if (blockMessage.acisBinary.isNotEmpty()) {
+      blockMessage.acisBinary.mapNotNull { ACI.parseOrNull(it)?.let { aci -> RecipientTable.BlockedAci(aci) } }
+    } else {
+      emptyList()
+    }
 
-    SignalDatabase.recipients.applyBlockedUpdate(blockedE164s, blockedAcis, blockedGroupIds)
+    val blockedE164s = if (blockMessage.blockedE164s.isNotEmpty()) {
+      blockMessage.blockedE164s.mapNotNull { blockedE164 -> blockedE164.e164?.let { RecipientTable.BlockedE164(it, blockedE164.timestamp ?: 0) } }
+    } else if (blockMessage.numbers.isNotEmpty()) {
+      blockMessage.numbers.map { RecipientTable.BlockedE164(it) }
+    } else {
+      emptyList()
+    }
+
+    val blockedGroups = if (blockMessage.blockedGroups.isNotEmpty()) {
+      blockMessage.blockedGroups.mapNotNull { group -> group.groupId?.toByteArray()?.let { RecipientTable.BlockedGroup(it, group.timestamp ?: 0) } }
+    } else if (blockMessage.groupIds.isNotEmpty()) {
+      blockMessage.groupIds.map { RecipientTable.BlockedGroup(it.toByteArray(), 0) }
+    } else {
+      emptyList()
+    }
+
+    log(envelopeTimestamp, "Synchronize block message. Counts: (ACI: ${blockedAcis.size}, E164: ${blockedE164s.size}, Group: ${blockedGroups.size})")
+
+    SignalDatabase.recipients.applyBlockedUpdate(blockedE164s, blockedAcis, blockedGroups)
   }
 
   private fun handleSynchronizeFetchMessage(fetchType: FetchLatest.Type, envelopeTimestamp: Long) {
@@ -1183,7 +1210,7 @@ object SyncMessageProcessor {
       MessageRequestResponse.Type.ACCEPT -> {
         val wasBlocked = recipient.isBlocked
         SignalDatabase.recipients.setProfileSharing(recipient.id, true)
-        SignalDatabase.recipients.setBlocked(recipient.id, false)
+        SignalDatabase.recipients.setBlocked(recipient.id, false, 0)
         if (wasBlocked) {
           SignalDatabase.messages.insertMessageOutbox(
             message = OutgoingMessage.unblockedMessage(recipient, System.currentTimeMillis(), TimeUnit.SECONDS.toMillis(recipient.expiresInSeconds.toLong())),
@@ -1203,7 +1230,7 @@ object SyncMessageProcessor {
         }
       }
       MessageRequestResponse.Type.BLOCK -> {
-        SignalDatabase.recipients.setBlocked(recipient.id, true)
+        SignalDatabase.recipients.setBlocked(recipient.id, true, envelopeTimestamp)
         RecipientUtil.updateProfileSharingAfterBlock(recipient, true)
         SignalDatabase.messages.insertMessageOutbox(
           message = OutgoingMessage.blockedMessage(recipient, System.currentTimeMillis(), TimeUnit.SECONDS.toMillis(recipient.expiresInSeconds.toLong())),
@@ -1211,7 +1238,7 @@ object SyncMessageProcessor {
         )
       }
       MessageRequestResponse.Type.BLOCK_AND_DELETE -> {
-        SignalDatabase.recipients.setBlocked(recipient.id, true)
+        SignalDatabase.recipients.setBlocked(recipient.id, true, envelopeTimestamp)
         RecipientUtil.updateProfileSharingAfterBlock(recipient, true)
         if (threadId > 0) {
           SignalDatabase.threads.deleteConversation(threadId, syncThreadDelete = false)
@@ -1224,7 +1251,7 @@ object SyncMessageProcessor {
         )
       }
       MessageRequestResponse.Type.BLOCK_AND_SPAM -> {
-        SignalDatabase.recipients.setBlocked(recipient.id, true)
+        SignalDatabase.recipients.setBlocked(recipient.id, true, envelopeTimestamp)
         RecipientUtil.updateProfileSharingAfterBlock(recipient, true)
         SignalDatabase.messages.insertMessageOutbox(
           message = OutgoingMessage.reportSpamMessage(recipient, System.currentTimeMillis(), TimeUnit.SECONDS.toMillis(recipient.expiresInSeconds.toLong())),
@@ -1374,7 +1401,7 @@ object SyncMessageProcessor {
       }
 
       CallLogEvent.Type.MARKED_AS_READ -> {
-        SignalDatabase.calls.markAllCallEventsRead(timestamp)
+        SignalDatabase.calls.markAllCallEventsRead(timestamp, envelopeTimestamp)
       }
 
       CallLogEvent.Type.MARKED_AS_READ_IN_CONVERSATION -> {
@@ -1383,7 +1410,7 @@ object SyncMessageProcessor {
           return
         }
 
-        SignalDatabase.calls.markAllCallEventsWithPeerBeforeTimestampRead(peer, timestamp)
+        SignalDatabase.calls.markAllCallEventsWithPeerBeforeTimestampRead(peer, timestamp, envelopeTimestamp)
       }
 
       else -> log(envelopeTimestamp, "Synchronize call log event has an invalid type $eventType, ignoring.")
@@ -1469,7 +1496,7 @@ object SyncMessageProcessor {
     } else if (event == CallTable.Event.DELETE) {
       SignalDatabase.calls.insertDeletedCallFromSyncEvent(callId, recipientId, type, direction, timestamp)
     } else {
-      SignalDatabase.calls.insertOneToOneCall(callId, timestamp, recipientId, type, direction, event)
+      SignalDatabase.calls.insertOneToOneCall(callId, timestamp, recipientId, type, direction, event, fromSync = true)
     }
   }
 
@@ -1739,7 +1766,7 @@ object SyncMessageProcessor {
       return
     }
 
-    val attachments: List<DatabaseAttachment> = SignalDatabase.attachments.getAttachmentsForMessage(messageId).filterNot { it.quote }.sortedBy { it.displayOrder }
+    val attachments: List<DatabaseAttachment> = AttachmentBackfill.backfillAttachmentsForMessage(messageId)
     if (attachments.isEmpty()) {
       warn(timestamp, "[AttachmentBackfillRequest] There were no attachments found for the message! Enqueuing a 'missing' response.")
       MultiDeviceAttachmentBackfillMissingJob.enqueue(request.targetMessage!!, request.targetConversation!!)
@@ -1747,7 +1774,7 @@ object SyncMessageProcessor {
     }
 
     val now = System.currentTimeMillis()
-    val needsUpload = attachments.filter { now - it.uploadTimestamp > 3.days.inWholeMilliseconds }
+    val needsUpload = attachments.filter { it.hasData && now - it.uploadTimestamp > 3.days.inWholeMilliseconds }
     log(timestamp, "[AttachmentBackfillRequest] ${needsUpload.size}/${attachments.size} attachments need to be re-uploaded.")
 
     for (attachment in needsUpload) {
@@ -1759,6 +1786,99 @@ object SyncMessageProcessor {
 
     // Enqueueing an update immediately to tell the requesting device that the primary is online.
     MultiDeviceAttachmentBackfillUpdateJob.enqueue(request.targetMessage!!, request.targetConversation!!, messageId)
+  }
+
+  private fun handleSynchronizeAttachmentBackfillResponse(response: AttachmentBackfillResponse, timestamp: Long) {
+    if (SignalStore.account.isPrimaryDevice) {
+      log(timestamp, "[AttachmentBackfillResponse] Primary device ignores attachment backfill response.")
+      return
+    }
+
+    if (response.targetMessage == null || response.targetConversation == null) {
+      warn(timestamp, "[AttachmentBackfillResponse] Missing targetMessage or targetConversation; dropping.")
+      return
+    }
+
+    val syncMessageId = response.targetMessage!!.toSyncMessageId(timestamp)
+    if (syncMessageId == null) {
+      warn(timestamp, "[AttachmentBackfillResponse] Invalid targetMessage; dropping.")
+      return
+    }
+
+    val conversationRecipientId = response.targetConversation!!.toRecipientId()
+    if (conversationRecipientId == null) {
+      warn(timestamp, "[AttachmentBackfillResponse] Unable to resolve targetConversation; dropping.")
+      return
+    }
+
+    val threadId = SignalDatabase.threads.getThreadIdFor(conversationRecipientId)
+    if (threadId == null) {
+      warn(timestamp, "[AttachmentBackfillResponse] No thread for conversation; dropping.")
+      return
+    }
+
+    val messageId = SignalDatabase.messages.getMessageIdOrNull(syncMessageId, threadId)
+    if (messageId == null) {
+      warn(timestamp, "[AttachmentBackfillResponse] Unable to find local message; dropping.")
+      return
+    }
+
+    if (response.error == AttachmentBackfillResponse.Error.MESSAGE_NOT_FOUND) {
+      log(timestamp, "[AttachmentBackfillResponse] Primary could not find message $messageId; marking attachments failed")
+      val attachments = AttachmentBackfill.backfillAttachmentsForMessage(messageId)
+        .filterNot { it.transferState == AttachmentTable.TRANSFER_PROGRESS_DONE }
+      for (attachment in attachments) {
+        SignalDatabase.attachments.setTransferProgressFailed(attachment.attachmentId, messageId)
+      }
+      AttachmentBackfill.onResponseMessageNotFound(messageId, threadId)
+      return
+    }
+
+    val attachmentList = response.attachments
+    if (attachmentList == null) {
+      warn(timestamp, "[AttachmentBackfillResponse] Response has neither error nor attachments; dropping.")
+      return
+    }
+
+    val contract = AttachmentBackfill.backfillContractForMessage(messageId)
+    val localBody = contract.bodyAttachments
+    val localLongText = contract.longTextAttachment
+
+    var anyPending = false
+    var pointersApplied = 0
+
+    for ((index, remote) in attachmentList.attachments.withIndex()) {
+      val local = localBody.getOrNull(index)
+      if (local == null) {
+        warn(timestamp, "[AttachmentBackfillResponse] Remote attachment $index has no local row; skipping.")
+        continue
+      }
+      when (applyAttachmentData(local, remote, messageId)) {
+        // UPDATED/PENDING keep awaiting; the re-download terminates them later.
+        BackfillApplyResult.PENDING -> anyPending = true
+        BackfillApplyResult.UPDATED -> pointersApplied++
+        // Won't re-download, so stop awaiting now.
+        BackfillApplyResult.SKIPPED,
+        BackfillApplyResult.TERMINAL -> AttachmentBackfill.onAttachmentTerminal(local.attachmentId, messageId)
+      }
+    }
+
+    if (localLongText != null) {
+      if (attachmentList.longText != null) {
+        when (applyAttachmentData(localLongText, attachmentList.longText!!, messageId)) {
+          BackfillApplyResult.PENDING -> anyPending = true
+          BackfillApplyResult.UPDATED -> pointersApplied++
+          BackfillApplyResult.SKIPPED,
+          BackfillApplyResult.TERMINAL -> AttachmentBackfill.onAttachmentTerminal(localLongText.attachmentId, messageId)
+        }
+      } else {
+        AttachmentBackfill.onAttachmentTerminal(localLongText.attachmentId, messageId)
+      }
+    }
+
+    log(timestamp, "[AttachmentBackfillResponse] Processed response for messageId=$messageId pointersApplied=$pointersApplied anyPending=$anyPending")
+
+    AttachmentBackfill.onResponseProcessed(messageId, anyPending)
   }
 
   private fun handleSynchronizePniChangeNumber(envelope: Envelope, metadata: EnvelopeMetadata, pniChangeNumber: SyncMessage.PniChangeNumber) {
@@ -1801,11 +1921,6 @@ object SyncMessageProcessor {
       return
     }
 
-    if (SignalStore.account.pni == PNI(pni)) {
-      log(timestamp, "PniChangeNumber sync already applied locally. Skipping.")
-      return
-    }
-
     val identityKeyPairBytes = pniChangeNumber.identityKeyPair
     val signedPreKeyBytes = pniChangeNumber.signedPreKey
     val registrationId = pniChangeNumber.registrationId
@@ -1839,8 +1954,6 @@ object SyncMessageProcessor {
       pniRegistrationId = registrationId
     )
 
-    SignalStore.misc.lastAppliedPniChangeServerTimestamp = envelopeServerTimestamp
-
     // The primary already submitted these per-device prekeys to the server as part of the
     // change-number request, so they are registered server-side from this device's perspective.
     val pniMetadataStore = SignalStore.account.pniPreKeys
@@ -1852,6 +1965,48 @@ object SyncMessageProcessor {
     // Rotate the primary-generated keys as soon as possible so we don't rely on them long-term.
     SignalStore.misc.forcePniSignedPreKeyRotation = true
     AppDependencies.jobManager.add(PreKeysSyncJob.create(forceRotationRequested = true))
+
+    SignalStore.misc.lastAppliedPniChangeServerTimestamp = envelopeServerTimestamp
+  }
+
+  private fun applyAttachmentData(
+    local: DatabaseAttachment,
+    remote: AttachmentBackfillResponse.AttachmentData,
+    messageId: Long
+  ): BackfillApplyResult {
+    if (local.transferState == AttachmentTable.TRANSFER_PROGRESS_DONE) {
+      return BackfillApplyResult.SKIPPED
+    }
+
+    if (remote.status == AttachmentBackfillResponse.AttachmentData.Status.PENDING) {
+      return BackfillApplyResult.PENDING
+    }
+
+    if (remote.status == AttachmentBackfillResponse.AttachmentData.Status.TERMINAL_ERROR) {
+      SignalDatabase.attachments.setTransferProgressPermanentFailure(local.attachmentId, messageId)
+      return BackfillApplyResult.TERMINAL
+    }
+
+    val attachment = remote.attachment?.toPointer() ?: return BackfillApplyResult.SKIPPED
+
+    val updated = SignalDatabase.attachments.updatePointerFromBackfill(local.attachmentId, attachment)
+    if (!updated) {
+      SignalDatabase.attachments.setTransferProgressPermanentFailure(local.attachmentId, messageId)
+      return BackfillApplyResult.TERMINAL
+    }
+
+    SignalDatabase.runPostSuccessfulTransaction {
+      AppDependencies.jobManager.add(
+        AttachmentDownloadJob(
+          messageId = messageId,
+          attachmentId = local.attachmentId,
+          forceDownload = true,
+          requestSource = AttachmentDownloadJob.RequestSource.BACKFILL
+        )
+      )
+    }
+
+    return BackfillApplyResult.UPDATED
   }
 
   private fun handleSynchronizedPollCreate(
@@ -1896,8 +2051,8 @@ object SyncMessageProcessor {
     SignalDatabase.messages.markAsSent(messageId)
 
     if (expiresInMillis > 0) {
-      SignalDatabase.messages.markExpireStarted(messageId, sent.expirationStartTimestamp ?: 0)
-      AppDependencies.expiringMessageManager.scheduleDeletion(messageId, recipient.isGroup, sent.expirationStartTimestamp ?: 0, expiresInMillis)
+      SignalDatabase.messages.markExpireStarted(messageId, sent.expirationStartTimestamp ?: sent.timestamp!!)
+      AppDependencies.expiringMessageManager.scheduleDeletion(messageId, recipient.isGroup, sent.expirationStartTimestamp ?: sent.timestamp!!, expiresInMillis)
     }
 
     return threadId
@@ -1930,6 +2085,13 @@ object SyncMessageProcessor {
       }
       return -1
     }
+
+    val targetThreadId = SignalDatabase.threads.getRecipientIdForThreadId(targetMessage.threadId)
+    if (threadId != targetMessage.threadId) {
+      warn(envelope.clientTimestamp!!, "Target thread does not match. $threadId $targetThreadId")
+      return -1
+    }
+
     val poll = SignalDatabase.polls.getPoll(targetMessage.id)
     if (poll == null) {
       warn(envelope.clientTimestamp!!, "Unable to find poll for poll termination. Dropping.")
@@ -1956,8 +2118,8 @@ object SyncMessageProcessor {
     log(envelope.clientTimestamp!!, "Inserted sync poll end message as messageId $messageId")
 
     if (expiresInMillis > 0) {
-      SignalDatabase.messages.markExpireStarted(messageId, sent.expirationStartTimestamp ?: 0)
-      AppDependencies.expiringMessageManager.scheduleDeletion(messageId, recipient.isGroup, sent.expirationStartTimestamp ?: 0, expiresInMillis)
+      SignalDatabase.messages.markExpireStarted(messageId, sent.expirationStartTimestamp ?: sent.timestamp!!)
+      AppDependencies.expiringMessageManager.scheduleDeletion(messageId, recipient.isGroup, sent.expirationStartTimestamp ?: sent.timestamp!!, expiresInMillis)
     }
 
     return threadId
@@ -2023,8 +2185,8 @@ object SyncMessageProcessor {
     log(envelope.clientTimestamp!!, "Inserted sync pin message as messageId $messageId")
 
     if (expiresInMillis > 0) {
-      SignalDatabase.messages.markExpireStarted(messageId, sent.expirationStartTimestamp ?: 0)
-      AppDependencies.expiringMessageManager.scheduleDeletion(messageId, recipient.isGroup, sent.expirationStartTimestamp ?: 0, expiresInMillis)
+      SignalDatabase.messages.markExpireStarted(messageId, sent.expirationStartTimestamp ?: sent.timestamp!!)
+      AppDependencies.expiringMessageManager.scheduleDeletion(messageId, recipient.isGroup, sent.expirationStartTimestamp ?: sent.timestamp!!, expiresInMillis)
     }
 
     return threadId
@@ -2063,7 +2225,7 @@ object SyncMessageProcessor {
   }
 
   private fun AddressableMessage.toSyncMessageId(envelopeTimestamp: Long): MessageTable.SyncMessageId? {
-    return if (this.sentTimestamp != null && Utils.anyNotNull(this.authorServiceId, this.authorServiceIdBinary) || this.authorE164 != null) {
+    return if (this.sentTimestamp != null && (Utils.anyNotNull(this.authorServiceId, this.authorServiceIdBinary) || this.authorE164 != null)) {
       val serviceId = ServiceId.parseOrNull(this.authorServiceId, this.authorServiceIdBinary)
       val id = if (serviceId != null) {
         SignalDatabase.recipients.getOrInsertFromServiceId(serviceId)
@@ -2090,4 +2252,6 @@ object SyncMessageProcessor {
       return AttachmentTable.SyncAttachmentId(syncMessageId, uuid, digest, plaintextHash)
     }
   }
+
+  private enum class BackfillApplyResult { SKIPPED, PENDING, TERMINAL, UPDATED }
 }

@@ -25,7 +25,7 @@ import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.CustomTarget;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.transition.Transition;
-import org.github.chrisbanes.photoview.PhotoView;
+import com.github.chrisbanes.photoview.PhotoView;
 
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.avatar.fallback.FallbackAvatar;
@@ -36,6 +36,7 @@ import org.thoughtcrime.securesms.contacts.avatars.ProfileContactPhoto;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.thoughtcrime.securesms.util.FullscreenHelper;
+import org.thoughtcrime.securesms.util.WindowUtil;
 
 /**
  * Activity for displaying avatars full screen.
@@ -76,6 +77,9 @@ public final class AvatarPreviewActivity extends PassphraseRequiredActivity {
 
     setTheme(R.style.TextSecure_MediaPreview);
     setContentView(R.layout.contact_photo_preview_activity);
+
+    WindowUtil.clearLightStatusBar(getWindow());
+    WindowUtil.clearLightNavigationBar(getWindow());
 
     postponeEnterTransition();
     TransitionInflater inflater = TransitionInflater.from(this);

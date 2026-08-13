@@ -94,7 +94,8 @@ object RecurringInAppPaymentRepository {
     } ?: return NetworkResult.Success(ActiveSubscription.EMPTY)
 
     response.result.ifPresent { result ->
-      if (result.isActive && result.activeSubscription.endOfCurrentPeriod > SignalStore.inAppPayments.getLastEndOfPeriod()) {
+      val lastEndOfPeriod = SignalDatabase.inAppPayments.getByLatestEndOfPeriod(type.inAppPaymentType)?.endOfPeriodSeconds ?: 0L
+      if (result.isActive && result.activeSubscription.endOfCurrentPeriod > lastEndOfPeriod) {
         InAppPaymentKeepAliveJob.enqueueAndTrackTime(System.currentTimeMillis().milliseconds)
       }
     }
@@ -174,7 +175,7 @@ object RecurringInAppPaymentRepository {
       InAppPaymentsRepository.getSubscriber(subscriberType)?.subscriberId ?: SubscriberId.generate()
     }
 
-    donationsService.putSubscription(subscriberId).resultOrThrow
+    donationsService.createSubscriber(subscriberId).resultOrThrow
 
     Log.d(TAG, "Successfully set SubscriberId exists on Signal service.", true)
 

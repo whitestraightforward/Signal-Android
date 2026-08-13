@@ -2,28 +2,40 @@
  * Copyright 2024 Signal Messenger, LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 package org.thoughtcrime.securesms.registration.ui.permissions
 
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.setFragmentResult
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import org.signal.core.ui.compose.ComposeFragment
 import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.registration.fragments.WelcomePermissions
+import org.thoughtcrime.securesms.registration.ui.RegistrationCheckpoint
+import org.thoughtcrime.securesms.registration.ui.RegistrationViewModel
 import org.thoughtcrime.securesms.registration.ui.welcome.WelcomeUserSelection
 import org.thoughtcrime.securesms.util.BackupUtil
 
+/**
+ * Screen in account registration that provides rationales for the suggested runtime permissions.
+ */
 class GrantPermissionsFragment : ComposeFragment() {
+
   companion object {
     private val TAG = Log.tag(GrantPermissionsFragment::class.java)
+
     const val REQUEST_KEY = "GrantPermissionsFragment"
   }
 
+  private val sharedViewModel by activityViewModels<RegistrationViewModel>()
   private val args by navArgs<GrantPermissionsFragmentArgs>()
 
   private val requestPermissionLauncher = registerForActivityResult(
@@ -45,15 +57,25 @@ class GrantPermissionsFragment : ComposeFragment() {
 
   private fun launchPermissionRequests() {
     val isUserSelectionRequired = BackupUtil.isUserSelectionRequired(requireContext())
-    val basePermissions = WelcomePermissions.getWelcomePermissions(isUserSelectionRequired)
-    requestPermissionLauncher.launch(basePermissions)
+
+    val neededPermissions = WelcomePermissions.getWelcomePermissions(isUserSelectionRequired).filterNot {
+      ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
+    }
+
+    if (neededPermissions.isEmpty()) {
+      proceedToNextScreen()
+    } else {
+      requestPermissionLauncher.launch(neededPermissions.toTypedArray())
+    }
   }
 
   private fun onPermissionsGranted(permissions: Map<String, Boolean>) {
-    proceedToNextScreen()
     permissions.forEach {
       Log.d(TAG, "${it.key} = ${it.value}")
     }
+    sharedViewModel.maybePrefillE164(requireContext())
+    sharedViewModel.setRegistrationCheckpoint(RegistrationCheckpoint.PERMISSIONS_GRANTED)
+    proceedToNextScreen()
   }
 
   private fun proceedToNextScreen() {

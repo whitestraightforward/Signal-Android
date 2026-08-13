@@ -42,6 +42,7 @@ import org.signal.archive.proto.Text
 import org.signal.archive.proto.ThreadMergeChatUpdate
 import org.signal.archive.proto.ViewOnceMessage
 import org.signal.core.models.ServiceId
+import org.signal.core.models.database.AttachmentId
 import org.signal.core.util.Base64
 import org.signal.core.util.EventTimer
 import org.signal.core.util.Hex
@@ -68,7 +69,6 @@ import org.signal.core.util.requireLong
 import org.signal.core.util.requireLongOrNull
 import org.signal.core.util.requireString
 import org.signal.core.util.toByteArray
-import org.thoughtcrime.securesms.attachments.AttachmentId
 import org.thoughtcrime.securesms.attachments.DatabaseAttachment
 import org.thoughtcrime.securesms.backup.v2.BackupMode
 import org.thoughtcrime.securesms.backup.v2.ExportOddities
@@ -647,14 +647,21 @@ private fun BackupMessageRecord.toBasicChatItemBuilder(selfRecipientId: Recipien
     }
   }
 
-  if (!MessageTypes.isExpirationTimerUpdate(record.type) && builder.expiresInMs != null && builder.expireStartDate != null) {
-    val cutoffDuration = ChatItemArchiveExporter.EXPIRATION_CUTOFF.inWholeMilliseconds
-    val expiresAt = builder.expireStartDate!! + builder.expiresInMs!!
-    val threshold = if (exportState.backupMode.isLinkAndSync) backupStartTime else backupStartTime + cutoffDuration
-
-    if (expiresAt < threshold || (builder.expiresInMs!! <= cutoffDuration && !exportState.backupMode.isLinkAndSync)) {
+  if (!MessageTypes.isExpirationTimerUpdate(record.type) && builder.expiresInMs != null) {
+    if (exportState.backupMode.isPlaintextExport) {
       Log.w(TAG, ExportSkips.messageExpiresTooSoon(record.dateSent))
       return null
+    }
+
+    if (builder.expireStartDate != null) {
+      val cutoffDuration = ChatItemArchiveExporter.EXPIRATION_CUTOFF.inWholeMilliseconds
+      val expiresAt = builder.expireStartDate!! + builder.expiresInMs!!
+      val threshold = if (exportState.backupMode.isLinkAndSync) backupStartTime else backupStartTime + cutoffDuration
+
+      if (expiresAt < threshold || (builder.expiresInMs!! <= cutoffDuration && !exportState.backupMode.isLinkAndSync)) {
+        Log.w(TAG, ExportSkips.messageExpiresTooSoon(record.dateSent))
+        return null
+      }
     }
   }
 

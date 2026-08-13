@@ -74,8 +74,12 @@ import org.thoughtcrime.securesms.migrations.EmojiSearchEnglishLabelsMigrationJo
 import org.thoughtcrime.securesms.migrations.EmojiSearchIndexCheckMigrationJob;
 import org.thoughtcrime.securesms.migrations.FixChangeNumberErrorMigrationJob;
 import org.thoughtcrime.securesms.migrations.GooglePlayBillingPurchaseTokenMigrationJob;
+import org.thoughtcrime.securesms.migrations.GroupDeletedBackfillMigrationJob;
 import org.thoughtcrime.securesms.migrations.IdentityTableCleanupMigrationJob;
+import org.thoughtcrime.securesms.migrations.KeyTransparencyFailureMigrationJob;
+import org.thoughtcrime.securesms.migrations.KeyTransparencyUsernameMigrationJob;
 import org.thoughtcrime.securesms.migrations.LegacyMigrationJob;
+import org.thoughtcrime.securesms.migrations.LocalArchiveReconciliationMigrationJob;
 import org.thoughtcrime.securesms.migrations.MigrationCompleteJob;
 import org.thoughtcrime.securesms.migrations.OptimizeMessageSearchIndexMigrationJob;
 import org.thoughtcrime.securesms.migrations.PassingMigrationJob;
@@ -111,6 +115,7 @@ import org.thoughtcrime.securesms.migrations.SyncCallLinksMigrationJob;
 import org.thoughtcrime.securesms.migrations.SyncChatFoldersMigrationJob;
 import org.thoughtcrime.securesms.migrations.SyncDistributionListsMigrationJob;
 import org.thoughtcrime.securesms.migrations.SyncKeysMigrationJob;
+import org.thoughtcrime.securesms.migrations.SyncStickerPacksMigrationJob;
 import org.thoughtcrime.securesms.migrations.TrimByLengthSettingsMigrationJob;
 import org.thoughtcrime.securesms.migrations.UpdateSmsJobsMigrationJob;
 import org.thoughtcrime.securesms.migrations.UserNotificationMigrationJob;
@@ -184,6 +189,7 @@ public final class JobManagerFactories {
       put(GroupCallUpdateSendJob.KEY,                  new GroupCallUpdateSendJob.Factory());
       put(GroupCallPeekJob.KEY,                        new GroupCallPeekJob.Factory());
       put(GroupCallPeekWorkerJob.KEY,                  new GroupCallPeekWorkerJob.Factory());
+      put(GroupDeletedBackfillWorkerJob.KEY,           new GroupDeletedBackfillWorkerJob.Factory());
       put(GroupRingCleanupJob.KEY,                     new GroupRingCleanupJob.Factory());
       put(GroupV2UpdateSelfProfileKeyJob.KEY,          new GroupV2UpdateSelfProfileKeyJob.Factory());
       put(InAppPaymentAuthCheckJob.KEY,                new InAppPaymentAuthCheckJob.Factory());
@@ -209,6 +215,7 @@ public final class JobManagerFactories {
       put(MarkerJob.KEY,                               new MarkerJob.Factory());
       put(MessageSendLogCleanupJob.KEY,                new MessageSendLogCleanupJob.Factory());
       put(MultiDeviceAttachmentBackfillMissingJob.KEY, new MultiDeviceAttachmentBackfillMissingJob.Factory());
+      put(MultiDeviceAttachmentBackfillRequestJob.KEY, new MultiDeviceAttachmentBackfillRequestJob.Factory());
       put(MultiDeviceAttachmentBackfillUpdateJob.KEY,  new MultiDeviceAttachmentBackfillUpdateJob.Factory());
       put(MultiDeviceBlockedUpdateJob.KEY,             new MultiDeviceBlockedUpdateJob.Factory());
       put(MultiDeviceCallLinkSyncJob.KEY,              new MultiDeviceCallLinkSyncJob.Factory());
@@ -339,8 +346,12 @@ public final class JobManagerFactories {
       put(EmojiSearchIndexCheckMigrationJob.KEY,          new EmojiSearchIndexCheckMigrationJob.Factory());
       put(FixChangeNumberErrorMigrationJob.KEY,           new FixChangeNumberErrorMigrationJob.Factory());
       put(GooglePlayBillingPurchaseTokenMigrationJob.KEY, new GooglePlayBillingPurchaseTokenMigrationJob.Factory());
+      put(GroupDeletedBackfillMigrationJob.KEY,           new GroupDeletedBackfillMigrationJob.Factory());
       put(IdentityTableCleanupMigrationJob.KEY,           new IdentityTableCleanupMigrationJob.Factory());
+      put(KeyTransparencyFailureMigrationJob.KEY,         new KeyTransparencyFailureMigrationJob.Factory());
+      put(KeyTransparencyUsernameMigrationJob.KEY,        new KeyTransparencyUsernameMigrationJob.Factory());
       put(LegacyMigrationJob.KEY,                         new LegacyMigrationJob.Factory());
+      put(LocalArchiveReconciliationMigrationJob.KEY,     new LocalArchiveReconciliationMigrationJob.Factory());
       put(MigrationCompleteJob.KEY,                       new MigrationCompleteJob.Factory());
       put(OptimizeMessageSearchIndexMigrationJob.KEY,     new OptimizeMessageSearchIndexMigrationJob.Factory());
       put(PinOptOutMigration.KEY,                         new PinOptOutMigration.Factory());
@@ -375,6 +386,7 @@ public final class JobManagerFactories {
       put(SyncChatFoldersMigrationJob.KEY,                new SyncChatFoldersMigrationJob.Factory());
       put(SyncDistributionListsMigrationJob.KEY,          new SyncDistributionListsMigrationJob.Factory());
       put(SyncKeysMigrationJob.KEY,                       new SyncKeysMigrationJob.Factory());
+      put(SyncStickerPacksMigrationJob.KEY,               new SyncStickerPacksMigrationJob.Factory());
       put(TrimByLengthSettingsMigrationJob.KEY,           new TrimByLengthSettingsMigrationJob.Factory());
       put(UpdateSmsJobsMigrationJob.KEY,                  new UpdateSmsJobsMigrationJob.Factory());
       put(UserNotificationMigrationJob.KEY,               new UserNotificationMigrationJob.Factory());

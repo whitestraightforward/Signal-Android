@@ -36,9 +36,11 @@ import org.signal.aesgcmprovider.AesGcmProvider;
 import org.signal.core.util.AppForegroundObserver;
 import org.signal.core.util.DiskUtil;
 import org.signal.core.util.MemoryTracker;
+import org.signal.core.util.PartAuthorityUris;
 import org.signal.core.util.Util;
 import org.signal.core.util.concurrent.AnrDetector;
 import org.signal.core.util.concurrent.SignalExecutors;
+import org.signal.core.util.crypto.AttachmentSecretProvider;
 import org.signal.core.util.logging.AndroidLogger;
 import org.signal.core.util.logging.Log;
 import org.signal.core.util.logging.Scrubber;
@@ -46,20 +48,23 @@ import org.signal.core.util.tracing.Tracer;
 import org.signal.glide.SignalGlideCodecs;
 import org.signal.libsignal.net.ChatServiceException;
 import org.signal.libsignal.protocol.logging.SignalProtocolLoggerProvider;
+import org.signal.registration.RegistrationDependencies;
 import org.signal.ringrtc.CallManager;
 import org.thoughtcrime.securesms.apkupdate.ApkUpdateRefreshListener;
 import org.thoughtcrime.securesms.avatar.AvatarPickerStorage;
 import org.thoughtcrime.securesms.backup.v2.BackupRepository;
-import org.thoughtcrime.securesms.crypto.AttachmentSecretProvider;
+import org.thoughtcrime.securesms.clockskew.ClockSkewDetector;
+import org.thoughtcrime.securesms.preferences.EditProxyActivity;
+import org.thoughtcrime.securesms.conversation.drafts.DraftBlobs;
+import org.thoughtcrime.securesms.crypto.AppAttachmentSecretStore;
 import org.thoughtcrime.securesms.crypto.DatabaseSecretProvider;
 import org.thoughtcrime.securesms.database.LogDatabase;
-import org.thoughtcrime.securesms.database.SQLiteDatabase;
 import org.thoughtcrime.securesms.database.SignalDatabase;
 import org.thoughtcrime.securesms.database.SqlCipherLibraryLoader;
 import org.thoughtcrime.securesms.dependencies.AppDependencies;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencyProvider;
-import org.thoughtcrime.securesms.emoji.EmojiSource;
-import org.thoughtcrime.securesms.emoji.JumboEmoji;
+import org.signal.emoji.EmojiSource;
+import org.signal.emoji.JumboEmoji;
 import org.thoughtcrime.securesms.gcm.FcmFetchManager;
 import org.thoughtcrime.securesms.glide.SignalGlideComponents;
 import org.thoughtcrime.securesms.jobmanager.impl.SealedSenderConstraint;
@@ -98,10 +103,12 @@ import org.thoughtcrime.securesms.messageprocessingalarm.RoutineMessageFetchRece
 import org.thoughtcrime.securesms.messages.IncomingMessageObserver;
 import org.thoughtcrime.securesms.migrations.ApplicationMigrations;
 import org.thoughtcrime.securesms.mms.SignalGlideModule;
-import org.thoughtcrime.securesms.providers.BlobProvider;
 import org.thoughtcrime.securesms.ratelimit.RateLimitUtil;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.registration.util.RegistrationUtil;
+import org.thoughtcrime.securesms.registration.v2.AppContactSupportController;
+import org.thoughtcrime.securesms.registration.v2.AppRegistrationNetworkController;
+import org.thoughtcrime.securesms.registration.v2.AppRegistrationStorageController;
 import org.thoughtcrime.securesms.ringrtc.RingRtcLogger;
 import org.thoughtcrime.securesms.service.AnalyzeDatabaseAlarmListener;
 import org.thoughtcrime.securesms.service.DirectoryRefreshListener;
@@ -114,10 +121,11 @@ import org.thoughtcrime.securesms.service.webrtc.ActiveCallManager;
 import org.thoughtcrime.securesms.service.webrtc.AndroidTelecomUtil;
 import org.thoughtcrime.securesms.storage.StorageSyncHelper;
 import org.thoughtcrime.securesms.util.AppStartup;
-import org.thoughtcrime.securesms.util.DeviceProperties;
+import org.thoughtcrime.securesms.util.BatterySnapshotTracker;
+import org.signal.core.util.DeviceProperties;
 import org.thoughtcrime.securesms.util.DynamicTheme;
 import org.thoughtcrime.securesms.util.Environment;
-import org.thoughtcrime.securesms.util.PlayServicesUtil;
+import org.signal.core.util.PlayServicesUtil;
 import org.thoughtcrime.securesms.util.RemoteConfig;
 import org.thoughtcrime.securesms.util.SignalLocalMetrics;
 import org.thoughtcrime.securesms.util.SignalUncaughtExceptionHandler;
@@ -159,6 +167,8 @@ public class ApplicationContext extends Application implements AppForegroundObse
 
   @Override
   public void onCreate() {
+    PartAuthorityUris.init(BuildConfig.APPLICATION_ID);
+
     Tracer.getInstance().start("Application#onCreate()");
     AppStartup.getInstance().onApplicationCreate();
     SignalLocalMetrics.ColdStart.start();
@@ -171,7 +181,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
                 SqlCipherLibraryLoader.load();
                 SignalDatabase.init(this,
                                     DatabaseSecretProvider.getOrCreateDatabaseSecret(this),
-                                    AttachmentSecretProvider.getInstance(this).getOrCreateAttachmentSecret());
+                                    AttachmentSecretProvider.getInstance(this, AppAttachmentSecretStore.INSTANCE).getOrCreateAttachmentSecret());
                 Logger.setTarget(SqlCipherLogTarget.INSTANCE);
               })
               .addBlocking("signal-store", () -> SignalStore.init(this))
@@ -179,9 +189,9 @@ public class ApplicationContext extends Application implements AppForegroundObse
                 initializeLogging();
                 Log.i(TAG, "onCreate()");
               })
+              .addBlocking("security-provider", this::initializeSecurityProvider)
               .addBlocking("app-dependencies", this::initializeAppDependencies)
               .addBlocking("anr-detector", this::startAnrDetector)
-              .addBlocking("security-provider", this::initializeSecurityProvider)
               .addBlocking("crash-handling", this::initializeCrashHandling)
               .addBlocking("rx-init", this::initializeRx)
               .addBlocking("event-bus", () -> EventBus.builder().logNoSubscriberMessages(false).installDefaultEventBus())
@@ -259,6 +269,8 @@ public class ApplicationContext extends Application implements AppForegroundObse
     long startTime = System.currentTimeMillis();
     Log.i(TAG, "App is now visible. Battery: " + DeviceProperties.getBatteryLevel(this) + "% (charging: " + DeviceProperties.isCharging(this) + ")");
 
+    BatterySnapshotTracker.emit(this, "foreground");
+
     AppDependencies.getFrameRateTracker().start();
     AppDependencies.getMegaphoneRepository().onAppForegrounded();
     AppDependencies.getDeadlockDetector().start();
@@ -299,6 +311,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
   @Override
   public void onBackground() {
     Log.i(TAG, "App is no longer visible.");
+    BatterySnapshotTracker.emit(this, "background");
     KeyCachingService.onAppBackgrounded(this);
     AppDependencies.getMessageNotifier().clearVisibleThread();
     AppDependencies.getFrameRateTracker().stop();
@@ -410,6 +423,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
       AppDependencies.init(this, new ApplicationDependencyProvider(this));
     }
     AppForegroundObserver.begin();
+    ClockSkewDetector.beginObserving(this);
 
     if (Environment.USE_NEW_REGISTRATION) {
       initializeRegistrationDependencies();
@@ -417,16 +431,22 @@ public class ApplicationContext extends Application implements AppForegroundObse
   }
 
   private void initializeRegistrationDependencies() {
-    org.signal.registration.RegistrationDependencies.Companion.provide(
-      new org.signal.registration.RegistrationDependencies(
-        new org.thoughtcrime.securesms.registration.v2.AppRegistrationNetworkController(this, AppDependencies.getPushServiceSocket()),
-        new org.thoughtcrime.securesms.registration.v2.AppRegistrationStorageController(this),
+    RegistrationDependencies.provide(
+      new RegistrationDependencies(
+        new AppRegistrationNetworkController(this, AppDependencies.getRegistrationApiV2()),
+        new AppRegistrationStorageController(this),
         Environment.IS_LINK_AND_SYNC_AVAILABLE,
+        Environment.PHONENUMBERLESS_REGISTRATION,
         null,
         context -> {
           context.startActivity(new Intent(context, SubmitDebugLogActivity.class));
           return Unit.INSTANCE;
-        }
+        },
+        context -> {
+          context.startActivity(EditProxyActivity.intent(context));
+          return Unit.INSTANCE;
+        },
+        new AppContactSupportController()
       )
     );
   }
@@ -535,8 +555,13 @@ public class ApplicationContext extends Application implements AppForegroundObse
         fieldTrials.put("RingRTC-AnyAddressPortsKillSwitch", "Enabled");
       }
       CallManager.initialize(this, new RingRtcLogger(), fieldTrials);
-    } catch (UnsatisfiedLinkError e) {
-      throw new AssertionError("Unable to load ringrtc library", e);
+    } catch (UnsatisfiedLinkError | NullPointerException e) {
+      String abi = android.os.Build.SUPPORTED_ABIS.length > 0 ? android.os.Build.SUPPORTED_ABIS[0] : "unknown";
+      throw new AssertionError(
+          "Unable to load RingRTC native library for ABI " + abi +
+          ". Rebuild/install an APK that includes this ABI (emulators: do not use signal.slimApk=true; " +
+          "use the x86_64 or universal debug APK).",
+          e);
     }
   }
 
@@ -571,7 +596,7 @@ public class ApplicationContext extends Application implements AppForegroundObse
 
   @WorkerThread
   private void initializeBlobProvider() {
-    BlobProvider.getInstance().initialize(this);
+    AppDependencies.getBlobs().initialize(this, DraftBlobs.INSTANCE::deleteOrphanedDraftFiles);
   }
 
   @WorkerThread

@@ -62,6 +62,8 @@ class BackupValues(store: KeyValueStore) : SignalStoreValues(store) {
     private const val KEY_RESTORE_OVER_CELLULAR = "backup.restore.useCellular"
     private const val KEY_OPTIMIZE_STORAGE = "backup.optimizeStorage"
     private const val KEY_BACKUPS_INITIALIZED = "backup.initialized"
+    private const val KEY_MESSAGE_BACKUP_INITIALIZED = "backup.messageBackupInitialized"
+    private const val KEY_MEDIA_BACKUP_INITIALIZED = "backup.mediaBackupInitialized"
     private const val KEY_IMPORTED_EMPTY_ANDROID_SETTINGS = "backup.importedEmptyAndroidSettings"
 
     const val KEY_ARCHIVE_UPLOAD_STATE = "backup.archiveUploadState"
@@ -85,6 +87,7 @@ class BackupValues(store: KeyValueStore) : SignalStoreValues(store) {
     private const val KEY_BACKUP_DELETION_STATE = "backup.deletion.state"
     private const val KEY_REMOTE_STORAGE_GARBAGE_COLLECTION_PENDING = "backup.remoteStorageGarbageCollectionPending"
     private const val KEY_ARCHIVE_ATTACHMENT_RECONCILIATION_ATTEMPTS = "backup.archiveAttachmentReconciliationAttempts"
+    private const val KEY_LOCAL_RESTORE_RECONCILE_PENDING = "backup.localRestoreReconcilePending"
 
     private const val KEY_MEDIA_ROOT_BACKUP_KEY = "backup.mediaRootBackupKey"
 
@@ -112,6 +115,12 @@ class BackupValues(store: KeyValueStore) : SignalStoreValues(store) {
     private val cachedCdnCredentialsExpiresIn: Duration = 12.hours
 
     private val lock = ReentrantLock()
+  }
+
+  init {
+    if (!store.containsKey(KEY_MESSAGE_BACKUP_INITIALIZED)) {
+      migrateSplitBackupsInitialized()
+    }
   }
 
   public override fun onFirstEverAppLaunch() = Unit
@@ -185,6 +194,11 @@ class BackupValues(store: KeyValueStore) : SignalStoreValues(store) {
   var lastAttachmentReconciliationTime: Long by longValue(KEY_LAST_ATTACHMENT_RECONCILIATION_TIME, -1)
 
   var userManuallySkippedMediaRestore: Boolean by booleanValue(KEY_USER_MANUALLY_SKIPPED_MEDIA_RESTORE, false)
+
+  /**
+   * Set when a local backup restore is kicked off so that, once media restore completes, we reconcile the restored media against the archive CDN.
+   */
+  var localRestoreReconcilePending: Boolean by booleanValue(KEY_LOCAL_RESTORE_RECONCILE_PENDING, false)
 
   var backupExpiredAndDowngraded: Boolean by booleanValue(KEY_BACKUP_EXPIRED_AND_DOWNGRADED, false)
 
@@ -379,7 +393,8 @@ class BackupValues(store: KeyValueStore) : SignalStoreValues(store) {
       .beginWrite()
       .putLong(KEY_NEXT_BACKUP_TIME, -1)
       .putLong(KEY_LAST_BACKUP_TIME, -1)
-      .putBoolean(KEY_BACKUPS_INITIALIZED, false)
+      .putBoolean(KEY_MESSAGE_BACKUP_INITIALIZED, false)
+      .putBoolean(KEY_MEDIA_BACKUP_INITIALIZED, false)
       .putBoolean(KEY_BACKUP_UPLOADED, false)
       .putLong(KEY_LAST_VERIFY_KEY_TIME, -1)
       .putBoolean(KEY_HAS_VERIFIED_BEFORE, false)
@@ -389,7 +404,11 @@ class BackupValues(store: KeyValueStore) : SignalStoreValues(store) {
     backupTierInternalOverride = null
   }
 
-  var backupsInitialized: Boolean by booleanValue(KEY_BACKUPS_INITIALIZED, false)
+  /** Whether the message backupId has been reserved with the service and our public key set. */
+  var messageBackupInitialized: Boolean by booleanValue(KEY_MESSAGE_BACKUP_INITIALIZED, false)
+
+  /** The media counterpart to [messageBackupInitialized]. */
+  var mediaBackupInitialized: Boolean by booleanValue(KEY_MEDIA_BACKUP_INITIALIZED, false)
 
   var restoreState: RestoreState by enumValue(KEY_RESTORE_STATE, RestoreState.NONE, RestoreState.serializer)
   var totalRestorableAttachmentSize: Long by longValue(KEY_TOTAL_RESTORABLE_ATTACHMENT_SIZE, 0)
@@ -576,6 +595,18 @@ class BackupValues(store: KeyValueStore) : SignalStoreValues(store) {
 
   private fun getNextBackupFailureSheetSnoozeTime(previous: Duration): Duration {
     return previous + 7.days
+  }
+
+  /** Do not alter. If you need to migrate more stuff, create a new method. */
+  private fun migrateSplitBackupsInitialized() {
+    val initialized = getBoolean(KEY_BACKUPS_INITIALIZED, false)
+    Log.i(TAG, "Splitting the backups-initialized flag into message/media. Existing value: $initialized")
+
+    store
+      .beginWrite()
+      .putBoolean(KEY_MESSAGE_BACKUP_INITIALIZED, initialized)
+      .putBoolean(KEY_MEDIA_BACKUP_INITIALIZED, initialized)
+      .commit()
   }
 
   class SerializedCredentials(
