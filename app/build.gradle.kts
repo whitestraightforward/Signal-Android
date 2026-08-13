@@ -742,7 +742,7 @@ dependencies {
   implementation(project(":lib:blurhash"))
   implementation(project(":core:ui"))
   implementation(project(":core:models"))
-  implementation(prre:models-jvm"))
+  implementation(project(":core:models-jvm"))
   implementation(project(":core:serialization"))
   implementation(project(":feature:camera"))
   implementation(project(":feature:registration"))
