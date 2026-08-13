@@ -577,15 +577,16 @@ androidComponents {
       transformationRequest.set(renameRequest)
     }
 
-    // Include the test-only library on non-release builds.
-    if (variant.buildType == "release") {
-      variant.packaging.jniLibs.excludes.add("**/libsignal_jni_testing.so")
-      variant.androidResources.ignoreAssetsPatterns.add("libsignal-testing.md")
-    }
+    // Never ship the test-only libsignal binary.
+    variant.packaging.jniLibs.excludes.add("**/libsignal_jni_testing.so")
+    variant.androidResources.ignoreAssetsPatterns.add("libsignal-testing.md")
 
-    // Starting with minSdk 23, Android leaves native libraries uncompressed, which is fine for the Play Store, but not for our self-distributed APKs.
-    // This reverts it to the legacy behavior, compressing the native libraries, and drastically reducing the APK file size.
-    if (variant.name.contains("website", ignoreCase = true) || variant.name.contains("github", ignoreCase = true)) {
+    // Starting with minSdk 23, Android leaves native libraries uncompressed.
+    // Compress them so the APK on disk is much smaller (libsignal + RingRTC + SQLCipher).
+    if (slimApk ||
+      variant.name.contains("website", ignoreCase = true) ||
+      variant.name.contains("github", ignoreCase = true)
+    ) {
       variant.packaging.jniLibs.useLegacyPackaging.set(true)
     }
 
