@@ -69,7 +69,7 @@ val isInstrumentationTestRun = gradle.startParameter.taskNames.any { taskName ->
 // Smaller APKs by default: ARM only, no fat universal, compressed native libs.
 // Use -Psignal.slimApk=false (or signal.slimApk=false in gradle.properties) for
 // x86 emulator ABIs and a universal APK.
-val slimApk = (project.findProperty("signal.slimApk") as String?)?.toBoolean() ?: true
+val slimApk = (project.findProperty("signal.slimApk") as String?)?.toBoolean() ?: false
 val allAbis = listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
 val slimAbis = listOf("armeabi-v7a", "arm64-v8a")
 val packagedAbis = if (slimApk) slimAbis else allAbis
@@ -340,8 +340,6 @@ android {
         abiFilters += packagedAbis
       }
     }
-    resourceConfigurations += listOf()
-
     splits {
       abi {
         isEnable = !project.hasProperty("generateBaselineProfile")
@@ -607,7 +605,7 @@ androidComponents {
     }
 
     // Optional ARM-only release: drop x86 natives (emulators need slimApk=false).
-    if (slimApkRequested && variant.buildType == "release") {
+    if (slimApk && variant.buildType == "release") {
       variant.packaging.jniLibs.excludes.add("**/x86/*.so")
       variant.packaging.jniLibs.excludes.add("**/x86_64/*.so")
     }
@@ -1211,8 +1209,5 @@ abstract class RenameApkTask : DefaultTask() {
       originalFile.copyTo(newFile, overwrite = true)
       newFile
     }
-  }
-}
-  }
   }
 }
