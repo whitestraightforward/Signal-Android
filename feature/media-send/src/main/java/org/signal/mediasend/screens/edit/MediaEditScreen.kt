@@ -8,11 +8,13 @@ package org.signal.mediasend.screens.edit
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -30,17 +32,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.fragment.compose.AndroidFragment
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.signal.core.ui.WindowBreakpoint
 import org.signal.core.ui.compose.AllDevicePreviews
 import org.signal.core.ui.compose.LocalChatColorProvider
@@ -54,14 +69,14 @@ import org.signal.glide.compose.GlideImageScaleType
 import org.signal.glide.decryptableuri.DecryptableUri
 import org.signal.imageeditor.core.model.EditorModel
 import org.signal.mediasend.EditorState
-import org.signal.mediasend.MediaSendFlowState
+import org.signal.mediasend.MediaConstraints
 import org.signal.mediasend.PreviewMediaInputFactory
-import org.signal.mediasend.rememberPreviewState
 import org.signal.mediasend.screens.MediaSendMetrics
 import org.signal.mediasend.screens.edit.document.DocumentPage
 import org.signal.mediasend.screens.edit.image.BlurFacesBar
 import org.signal.mediasend.screens.edit.image.BrushWidthBar
 import org.signal.mediasend.screens.edit.image.BrushWidthPreview
+import org.signal.mediasend.screens.edit.image.DrawAnywhereToBlurPill
 import org.signal.mediasend.screens.edit.image.DrawModeColorBar
 import org.signal.mediasend.screens.edit.image.ImageEditor
 import org.signal.mediasend.screens.edit.image.ImageEditorClearAllButton
@@ -75,10 +90,14 @@ import org.signal.mediasend.screens.edit.video.VideoTrimBar
 import org.signal.mediasend.screens.edit.video.VideoTrimData
 import org.thoughtcrime.securesms.video.TranscodingConfig
 import org.thoughtcrime.securesms.video.interfaces.MediaInputFactory
+import kotlin.time.Duration.Companion.milliseconds
+
+/** After this, a kind's projection is fixed. */
+private val CHROME_SETTLE_WINDOW = 500.milliseconds
 
 @Composable
 internal fun MediaEditScreen(
-  state: MediaSendFlowState,
+  state: MediaEditState,
   onEvent: (MediaEditScreenEvents) -> Unit,
   imageControllers: ImageController.Container,
   mediaInputFactory: MediaInputFactory
@@ -99,16 +118,37 @@ internal fun MediaEditScreen(
     }
   }
 
-  // During a camera-first flow, backing out of edit when the only selection is the capture itself should discard the
-  // capture and return to the camera rather than leaving the empty editor on the back stack.
-  val isOnlyCameraFirstCapture = state.cameraFirstCapture != null &&
-    state.selectedMedia.size == 1 &&
-    state.selectedMedia.firstOrNull() == state.cameraFirstCapture
-  BackHandler(enabled = isOnlyCameraFirstCapture) {
+  // Read through the latest selection rather than the one captured when the effect below started, since removals and
+  // reordering change which media a settled page refers to without restarting it.
+  val currentSelectedMedia by rememberUpdatedState(state.selectedMedia)
+
+  // Focus belongs to the pager rather than to any one piece of chrome: the thumbnail rail is not composed for
+  // documents, and a swipe still has to be reported from there.
+  LaunchedEffect(pagerState) {
+    snapshotFlow { pagerState.isScrollInProgress }
+      .filter { !it }
+      .drop(1)
+      .collect {
+        val settledMedia = currentSelectedMedia.getOrNull(pagerState.currentPage)
+        if (settledMedia != null) {
+          onEvent(MediaEditScreenEvents.FocusedMediaChanged(settledMedia))
+        }
+      }
+  }
+
+  BackHandler(enabled = state.isOnlyCameraFirstCapture) {
     onEvent(MediaEditScreenEvents.NavigateBack)
   }
 
-  Box(modifier = Modifier.fillMaxSize()) {
+  val chromeInsets = remember { MediaEditChromeInsetsState() }
+  var rootSize by remember { mutableStateOf(IntSize.Zero) }
+
+  Box(
+    modifier = Modifier
+      .fillMaxSize()
+      .onGloballyPositioned { chromeInsets.rootCoordinates = it }
+      .onSizeChanged { rootSize = it }
+  ) {
     val isSmallWindowBreakpoint = rememberWindowBreakpoint() is WindowBreakpoint.Small
     val videoEditorViewModel = rememberVideoEditorViewModel()
 
@@ -135,6 +175,34 @@ internal fun MediaEditScreen(
     // chrome themselves, and clearing the screen would hide what they adjust.
     val isDragging = imageController?.imageEditorState?.isGestureActive == true || isVideoInteracting
 
+    val isAtRest = !isImageEditing && !isVideoInteracting
+    val isAtRestState by rememberUpdatedState(isAtRest)
+    val focusedChromeKind by rememberUpdatedState(focusedEditorState.chromeKind())
+    LaunchedEffect(chromeInsets, rootSize) {
+      chromeInsets.thaw()
+
+      val restingChrome = snapshotFlow { if (isAtRestState) chromeInsets.measured else null }
+        .filterNotNull()
+        .filter { it != ChromeInsets() }
+        .distinctUntilChanged()
+
+      snapshotFlow { if (isAtRestState) focusedChromeKind else null }
+        .filterNotNull()
+        .distinctUntilChanged()
+        .collectLatest { kind ->
+          if (chromeInsets.isFrozen(kind)) return@collectLatest
+
+          chromeInsets.settle(kind, restingChrome.first())
+
+          withTimeoutOrNull(CHROME_SETTLE_WINDOW) {
+            restingChrome.collect { chromeInsets.settle(kind, it) }
+          }
+          chromeInsets.freeze(kind)
+        }
+    }
+
+    val gutter = with(LocalDensity.current) { MediaSendMetrics.MediaProjectionGutter.toPx() }
+
     HorizontalPager(
       state = pagerState,
       modifier = Modifier.fillMaxSize(),
@@ -142,10 +210,18 @@ internal fun MediaEditScreen(
       userScrollEnabled = !isInteracting
     ) { index ->
       val uri = state.selectedMedia[index].uri
-      when (val editorState = state.editorStateMap[uri]) {
+      val editorState = state.editorStateMap[uri]
+
+      // This page's own kind, so a swiped-away video's trim bar does not go on padding an image.
+      val pageInsets = chromeInsets.contentInsetsFor(editorState.chromeKind(), gutter)
+      val pagePadding = animatedPagePadding(pageInsets)
+
+      when (editorState) {
         is EditorState.Image -> {
+          // Padded via the editor viewport, not the layout, so the canvas stays full-bleed.
           ImageEditor(
             controller = imageControllers.getOrCreate(uri, editorState.model),
+            contentInsets = pageInsets,
             modifier = Modifier.fillMaxSize()
           )
         }
@@ -153,7 +229,9 @@ internal fun MediaEditScreen(
         is EditorState.Document -> {
           DocumentPage(
             document = editorState,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+              .fillMaxSize()
+              .padding(pagePadding)
           )
         }
 
@@ -163,14 +241,20 @@ internal fun MediaEditScreen(
               model = DecryptableUri(uri),
               scaleType = GlideImageScaleType.FIT_CENTER,
               contentScale = ContentScale.Fit,
-              modifier = Modifier.fillMaxSize()
+              modifier = Modifier
+                .fillMaxSize()
+                .padding(pagePadding)
             )
           }
         }
 
         is EditorState.VideoTrim, EditorState.VideoGif -> {
           if (LocalInspectionMode.current) {
-            Box(modifier = Modifier.fillMaxSize().background(color = Color.Red))
+            Box(
+              modifier = Modifier
+                .fillMaxSize()
+                .background(color = Color.Red)
+            )
             return@HorizontalPager
           }
 
@@ -178,8 +262,10 @@ internal fun MediaEditScreen(
           var videoEditorFragment by remember(media.uri) { mutableStateOf<VideoEditorFragment?>(null) }
 
           AndroidFragment<VideoEditorFragment>(
-            modifier = Modifier.fillMaxSize(),
-            arguments = VideoEditorFragment.arguments(media.uri, maxAttachmentSize = 0L, isVideoGif = media.isVideoGif)
+            modifier = Modifier
+              .fillMaxSize()
+              .padding(pagePadding),
+            arguments = VideoEditorFragment.arguments(media.uri, maxAttachmentSize = 0L, isVideoGif = media.isVideoGif, width = media.width, height = media.height)
           ) { fragment ->
             videoEditorFragment = fragment
           }
@@ -257,12 +343,13 @@ internal fun MediaEditScreen(
         .padding(bottom = 10.dp)
         .navigationBarsPadding()
         .then(if (isTextEditing) Modifier.imePadding() else Modifier)
+        .reportChromeInset(chromeInsets, ChromeSlot.BOTTOM, ChromeEdge.BOTTOM)
     ) {
       Column(
         verticalArrangement = spacedBy(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
       ) {
-        if (focusedEditorState is EditorState.VideoTrim) {
+        if (focusedEditorState is EditorState.VideoTrim && MediaConstraints.isVideoTranscodeAvailable()) {
           VideoTrimTimeline(
             videoUri = focusedUri,
             editorState = focusedEditorState,
@@ -280,9 +367,6 @@ internal fun MediaEditScreen(
               selectedMedia = state.selectedMedia,
               pagerState = pagerState,
               enabled = !isInteracting,
-              onFocusedMediaChange = {
-                onEvent(MediaEditScreenEvents.FocusedMediaChanged(it))
-              },
               onThumbnailClick = { index ->
                 if (pagerState.currentPage == index) {
                   onEvent(MediaEditScreenEvents.RemoveMedia(state.selectedMedia[index]))
@@ -349,12 +433,13 @@ internal fun MediaEditScreen(
           canScheduleSend = !state.isStory,
           viewOnceAvailable = state.isViewOnceAvailable,
           viewOnce = state.isViewOnceEnabled,
+          isReply = state.isReply,
           message = state.message,
           recipientChatColor = recipientChatColor,
           onEvent = onEvent,
           onNextClick = { onEvent(MediaEditScreenEvents.NextClick) },
           modifier = Modifier
-            .widthIn(max = 624.dp)
+            .widthIn(max = MediaSendMetrics.BottomBarMaxWidth)
             .padding(horizontal = 16.dp)
             // Own padding rather than the stack's arrangement so the gap collapses along with the slide.
             .padding(top = 20.dp, bottom = 16.dp)
@@ -363,53 +448,72 @@ internal fun MediaEditScreen(
     }
 
     if (!isSmallWindowBreakpoint) {
-      MediaToolbar(
-        focusedUri = focusedUri,
-        focusedEditorState = focusedEditorState,
-        state = state,
-        onEvent = onEvent,
-        imageController = imageController,
-        isTextEditing = isTextEditing,
-        isDragging = isDragging,
+      DisposableEffect(Unit) {
+        onDispose { chromeInsets.clear(ChromeSlot.SIDE_RAIL) }
+      }
+
+      // Wrapped so the slot keeps reporting, at zero size, when MediaToolbar composes nothing.
+      Box(
         modifier = Modifier
           .align(Alignment.CenterEnd)
-      )
+          .reportChromeInset(chromeInsets, ChromeSlot.SIDE_RAIL, ChromeEdge.RIGHT)
+      ) {
+        MediaToolbar(
+          focusedUri = focusedUri,
+          focusedEditorState = focusedEditorState,
+          state = state,
+          onEvent = onEvent,
+          imageController = imageController,
+          isTextEditing = isTextEditing,
+          isDragging = isDragging
+        )
+      }
     }
 
     val displayNameState = state.recipientId?.let { LocalDisplayNameProvider.current(it.id) } ?: remember { mutableStateOf(null) }
     val displayName: String? by displayNameState
 
-    MediaEditControl(
-      faded = isDragging,
+    // One band, so the media has a single top edge to clear.
+    Box(
       modifier = Modifier
         .align(Alignment.TopCenter)
-        .padding(top = 10.dp)
+        .fillMaxWidth()
         .systemBarsPadding()
+        .reportChromeInset(chromeInsets, ChromeSlot.TOP_BAND, ChromeEdge.TOP)
     ) {
-      MediaEditSummaryPill(
-        displayName = displayName,
-        selectedMedia = state.selectedMedia,
-        selectedPage = pagerState.currentPage
+      MediaEditControl(
+        faded = isDragging || isImageEditing,
+        modifier = Modifier
+          .align(Alignment.TopCenter)
+          .padding(top = 10.dp)
+      ) {
+        if (imageController?.isUserBlurring == true) {
+          DrawAnywhereToBlurPill()
+        } else {
+          MediaEditSummaryPill(
+            displayName = displayName,
+            selectedMedia = state.selectedMedia,
+            selectedPage = pagerState.currentPage
+          )
+        }
+      }
+
+      ImageEditorUndoRedoButtons(
+        imageEditorController = imageController,
+        isDragging = isDragging,
+        modifier = Modifier
+          .align(Alignment.TopStart)
+          .padding(top = 12.dp, start = 16.dp)
+      )
+
+      ImageEditorClearAllButton(
+        imageEditorController = imageController,
+        isDragging = isDragging,
+        modifier = Modifier
+          .align(Alignment.TopEnd)
+          .padding(top = 12.dp, end = 16.dp)
       )
     }
-
-    ImageEditorUndoRedoButtons(
-      imageEditorController = imageController,
-      isDragging = isDragging,
-      modifier = Modifier
-        .align(Alignment.TopStart)
-        .padding(top = 12.dp, start = 16.dp)
-        .systemBarsPadding()
-    )
-
-    ImageEditorClearAllButton(
-      imageEditorController = imageController,
-      isDragging = isDragging,
-      modifier = Modifier
-        .align(Alignment.TopEnd)
-        .padding(top = 12.dp, end = 16.dp)
-        .systemBarsPadding()
-    )
 
     if (state.isSavingMedia) {
       MediaEditScreenDialogs.SavingToStorageProgressDialog()
@@ -424,7 +528,7 @@ internal fun MediaEditScreen(
  */
 @Composable
 private fun MediaToolbar(
-  state: MediaSendFlowState,
+  state: MediaEditState,
   onEvent: (MediaEditScreenEvents) -> Unit,
   focusedUri: Uri?,
   focusedEditorState: EditorState?,
@@ -445,15 +549,22 @@ private fun MediaToolbar(
   MediaEditControl(faded = isDragging, modifier = modifier) {
     when (focusedEditorState) {
       is EditorState.Image -> {
+        val breakpoint = rememberWindowBreakpoint()
+        val modifier = if (breakpoint is WindowBreakpoint.Small) {
+          Modifier
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp)
+        } else {
+          Modifier.padding(end = 24.dp)
+        }
+
         imageController?.let {
           ImageEditorToolbar(
             imageEditorController = it,
             state = state,
             editorState = focusedEditorState,
             onEvent = onEvent,
-            modifier = Modifier
-              .navigationBarsPadding()
-              .padding(end = 24.dp)
+            modifier = modifier
               .then(if (isTextEditing) Modifier.imePadding() else Modifier)
           )
         }
@@ -495,7 +606,9 @@ private fun VideoTrimTimeline(
 
   Column(
     horizontalAlignment = Alignment.End,
-    modifier = Modifier.fillMaxWidth()
+    modifier = Modifier
+      .widthIn(max = MediaSendMetrics.BottomBarMaxWidth)
+      .fillMaxWidth()
   ) {
     VideoTrimBar(
       videoUri = videoUri,
@@ -538,6 +651,17 @@ private fun VideoTrimTimeline(
   }
 }
 
+/** Eases the one correction a page gets when its kind is first measured. */
+@Composable
+private fun animatedPagePadding(insets: ChromeInsets): PaddingValues {
+  val density = LocalDensity.current
+  val horizontal by animateDpAsState(with(density) { insets.left.toDp() }, label = "pageInsetHorizontal")
+  val top by animateDpAsState(with(density) { insets.top.toDp() }, label = "pageInsetTop")
+  val bottom by animateDpAsState(with(density) { insets.bottom.toDp() }, label = "pageInsetBottom")
+
+  return PaddingValues(start = horizontal, top = top, end = horizontal, bottom = bottom)
+}
+
 @Composable
 private fun rememberVideoEditorViewModel(): VideoEditorViewModel {
   return if (LocalInspectionMode.current) {
@@ -554,12 +678,10 @@ private fun MediaEditScreenPreview() {
 
   Previews.Preview {
     MediaEditScreen(
-      state = rememberPreviewState().copy(
+      state = MediaEditState(
         selectedMedia = selectedMedia,
         focusedMedia = selectedMedia.first(),
-        editorStateMap = mutableMapOf(
-          selectedMedia.first().uri to EditorState.Image(EditorModel.create(0))
-        )
+        editorStateMap = mapOf(selectedMedia.first().uri to EditorState.Image(EditorModel.create(0)))
       ),
       onEvent = {},
       imageControllers = remember { ImageController.Container() },
@@ -575,12 +697,10 @@ private fun MediaEditScreenVideoPreview() {
 
   Previews.Preview {
     MediaEditScreen(
-      state = rememberPreviewState().copy(
+      state = MediaEditState(
         selectedMedia = selectedMedia,
         focusedMedia = selectedMedia.first(),
-        editorStateMap = mutableMapOf(
-          selectedMedia.first().uri to EditorState.VideoTrim(VideoTrimData())
-        )
+        editorStateMap = mapOf(selectedMedia.first().uri to EditorState.VideoTrim(VideoTrimData()))
       ),
       onEvent = {},
       imageControllers = remember { ImageController.Container() },

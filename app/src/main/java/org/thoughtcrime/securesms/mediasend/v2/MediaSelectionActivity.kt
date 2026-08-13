@@ -33,13 +33,13 @@ import org.signal.core.util.getParcelableArrayListExtraCompat
 import org.signal.core.util.getParcelableExtraCompat
 import org.signal.core.util.logging.Log
 import org.signal.core.util.overrideActivityTransitionCompat
+import org.signal.emoji.EmojiEventListener
 import org.signal.mediasend.MediaSendRoute
 import org.signal.mediasend.MediaValidator
 import org.signal.mediasend.screens.capture.MediaCaptureBottomBar
 import org.signal.mediasend.screens.capture.MediaCaptureScreenEvents
 import org.thoughtcrime.securesms.PassphraseRequiredActivity
 import org.thoughtcrime.securesms.R
-import org.thoughtcrime.securesms.components.emoji.EmojiEventListener
 import org.thoughtcrime.securesms.contacts.paged.ContactSearchKey
 import org.thoughtcrime.securesms.conversation.MessageSendType
 import org.thoughtcrime.securesms.keyboard.emoji.EmojiKeyboardEvent
@@ -141,9 +141,9 @@ class MediaSelectionActivity :
                 MediaCaptureScreenEvents.ShowCamera -> debouncer.publish { popTextStoryPostCreationFragment() }
                 MediaCaptureScreenEvents.ShowTextStory -> viewModel.sendCommand(HudCommand.GoToText)
                 MediaCaptureScreenEvents.NextClicked -> viewModel.sendCommand(HudCommand.GoToReview)
-                is MediaCaptureScreenEvents.Camera -> Unit
-                MediaCaptureScreenEvents.CycleTextStoryBackgroundColor -> Unit
-                MediaCaptureScreenEvents.AddLinkToTextStory -> Unit
+                is MediaCaptureScreenEvents.Camera,
+                is MediaCaptureScreenEvents.ParentStateChanged,
+                is MediaCaptureScreenEvents.SelectedCaptureScreenChanged -> Unit
               }
             },
             modifier = Modifier.navigationBarsPadding()

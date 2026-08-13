@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -69,6 +70,7 @@ fun AddAMessageRow(
   canScheduleSend: Boolean = false,
   viewOnceAvailable: Boolean = false,
   viewOnce: Boolean = false,
+  isReply: Boolean = false,
   recipientChatColor: Color? = null
 ) {
   Row(
@@ -79,15 +81,15 @@ fun AddAMessageRow(
     Row(
       verticalAlignment = Alignment.CenterVertically,
       modifier = Modifier
-        .background(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(percent = 50))
+        .background(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(24.dp))
         .weight(1f)
-        .heightIn(min = 40.dp)
+        .heightIn(min = 44.dp)
         .then(
           if (viewOnce) {
             // A view-once send cannot carry a body, so the row becomes a static label rather than an entry point.
             Modifier
           } else {
-            Modifier.clickable(enabled = enabled, onClickLabel = stringResource(R.string.AddAMessageRow__add_a_message), onClick = { onEvent(MediaEditScreenEvents.AddMessageClick()) }, role = Role.Button)
+            Modifier.clickable(enabled = enabled, onClickLabel = stringResource(if (isReply) R.string.AddAMessageRow__add_a_reply else R.string.AddAMessageRow__add_a_message), onClick = { onEvent(MediaEditScreenEvents.AddMessageClick()) }, role = Role.Button)
           }
         )
     ) {
@@ -113,10 +115,11 @@ fun AddAMessageRow(
         }
 
         LocalAddAMessageRowTextField.current(
-          message ?: stringResource(R.string.AddAMessageRow__message),
+          message?.takeIf { it.isNotBlank() } ?: stringResource(if (isReply) R.string.AddAMessageRow__add_a_reply else R.string.AddAMessageRow__message),
           Modifier
             .weight(1f)
-            .padding(end = if (viewOnceAvailable) 0.dp else 16.dp)
+            .height(44.dp)
+            .padding(end = if (viewOnceAvailable) 0.dp else 16.dp, top = 10.dp, bottom = 10.dp)
         )
       }
 
@@ -142,8 +145,8 @@ fun AddAMessageRow(
         onLongClick = if (canScheduleSend) scheduleSendMenuController::show else null,
         onLongClickLabel = stringResource(R.string.AddAMessageRow__schedule_send),
         colors = IconButtons.iconButtonColors(
-          containerColor = recipientChatColor ?: MaterialTheme.colorScheme.onSecondaryContainer,
-          contentColor = if (recipientChatColor != null) SignalTheme.colors.colorOnCustom else MaterialTheme.colorScheme.secondaryContainer,
+          containerColor = recipientChatColor ?: MaterialTheme.colorScheme.primaryContainer,
+          contentColor = if (recipientChatColor != null) SignalTheme.colors.colorOnCustom else MaterialTheme.colorScheme.onPrimaryContainer,
           disabledContainerColor = DisabledNextButtonColor,
           disabledContentColor = MaterialTheme.colorScheme.secondaryContainer
         ),
@@ -206,6 +209,19 @@ private fun AddAMessageRowViewOncePreview() {
 
 @DayNightPreviews
 @Composable
+private fun AddAMessageRowReplyPreview() {
+  Previews.Preview {
+    AddAMessageRow(
+      message = null,
+      onEvent = {},
+      onNextClick = {},
+      isReply = true
+    )
+  }
+}
+
+@DayNightPreviews
+@Composable
 private fun AddAMessageRowKnownRecipientPreview() {
   Previews.Preview {
     AddAMessageRow(
@@ -227,6 +243,18 @@ private fun AddAMessageRowDisabledPreview() {
       onNextClick = {},
       enabled = false,
       recipientChatColor = Color(0xFF3B7845)
+    )
+  }
+}
+
+@DayNightPreviews
+@Composable
+private fun AddAMessageRowLongContentPreview() {
+  Previews.Preview {
+    AddAMessageRow(
+      message = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+      onEvent = {},
+      onNextClick = {}
     )
   }
 }

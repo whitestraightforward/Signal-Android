@@ -32,8 +32,8 @@ plugins {
 val staticIps = Properties().apply { file("static-ips.properties").reader().use { load(it) } }
 staticIps.stringPropertyNames().forEach { rootProject.extra[it] = staticIps.getProperty(it) }
 
-val canonicalVersionCode = 1733
-val canonicalVersionName = "8.22.2"
+val canonicalVersionCode = 1734
+val canonicalVersionName = "8.23.0"
 val currentHotfixVersion = 0
 val maxHotfixVersions = 100
 
@@ -590,24 +590,16 @@ androidComponents {
       transformationRequest.set(renameRequest)
     }
 
-    // Never ship the test-only libsignal binary.
-    variant.packaging.jniLibs.excludes.add("**/libsignal_jni_testing.so")
-    variant.androidResources.ignoreAssetsPatterns.add("libsignal-testing.md")
-
-    // Starting with minSdk 23, Android leaves native libraries uncompressed.
-    // Compress them so the APK on disk is much smaller (libsignal + RingRTC + SQLCipher).
-    // Compress .so in every release APK (and whenever slimApk is on).
-    if (variant.buildType == "release" ||
-      variant.name.contains("website", ignoreCase = true) ||
-      variant.name.contains("github", ignoreCase = true)
-    ) {
-      variant.packaging.jniLibs.useLegacyPackaging.set(true)
+    // Include the test-only library on non-release builds.
+    if (variant.buildType == "release") {
+      variant.packaging.jniLibs.excludes.add("**/libsignal_jni_testing.so")
+      variant.androidResources.ignoreAssetsPatterns.add("libsignal-testing.md")
     }
 
-    // Optional ARM-only release: drop x86 natives (emulators need slimApk=false).
-    if (slimApk && variant.buildType == "release") {
-      variant.packaging.jniLibs.excludes.add("**/x86/*.so")
-      variant.packaging.jniLibs.excludes.add("**/x86_64/*.so")
+    // Starting with minSdk 23, Android leaves native libraries uncompressed, which is fine for the Play Store, but not for our self-distributed APKs.
+    // This reverts it to the legacy behavior, compressing the native libraries, and drastically reducing the APK file size.
+    if (variant.name.contains("website", ignoreCase = true) || variant.name.contains("github", ignoreCase = true)) {
+      variant.packaging.jniLibs.useLegacyPackaging.set(true)
     }
 
     // Version overrides
@@ -745,6 +737,7 @@ dependencies {
   implementation(project(":feature:camera"))
   implementation(project(":feature:registration"))
   implementation(project(":lib:apng"))
+  implementation(project(":lib:emoji"))
 
   implementation(libs.androidx.fragment.ktx)
   implementation(libs.androidx.appcompat)

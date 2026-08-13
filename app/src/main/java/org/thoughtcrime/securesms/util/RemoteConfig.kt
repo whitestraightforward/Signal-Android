@@ -838,20 +838,6 @@ object RemoteConfig {
     hotSwappable = true
   )
 
-  /** A comma-separated list of manufacturers that *should* use Telecom for calling.  */
-  val telecomManufacturerAllowList: String by remoteString(
-    key = "android.calling.telecomAllowList",
-    defaultValue = "",
-    hotSwappable = true
-  )
-
-  /** A comma-separated list of manufacturers that *should* use Telecom for calling.  */
-  val telecomModelBlocklist: String by remoteString(
-    key = "android.calling.telecomModelBlockList",
-    defaultValue = "",
-    hotSwappable = true
-  )
-
   /** A comma-separated list of manufacturers that should *not* use CameraX mixed mode.  */
   val cameraXMixedModelBlocklist: String by remoteString(
     key = "android.cameraXMixedModelBlockList.3",
@@ -1259,28 +1245,6 @@ object RemoteConfig {
   )
 
   /**
-   * Whether or not to receive admin delete messages.
-   */
-  @JvmStatic
-  @get:JvmName("receiveAdminDelete")
-  val receiveAdminDelete: Boolean by remoteBoolean(
-    key = "android.receiveAdminDelete.3",
-    defaultValue = false,
-    hotSwappable = true
-  )
-
-  /**
-   * Whether or not to send admin delete messages.
-   */
-  @JvmStatic
-  @get:JvmName("sendAdminDelete")
-  val sendAdminDelete: Boolean by remoteBoolean(
-    key = "android.sendAdminDelete.2",
-    defaultValue = false,
-    hotSwappable = true
-  )
-
-  /**
    * Maximum time that passes where a message can still be regularly deleted
    */
   @JvmStatic
@@ -1379,17 +1343,6 @@ object RemoteConfig {
   )
 
   /**
-   * Whether to collapse update events
-   */
-  @JvmStatic
-  @get:JvmName("collapseEvents")
-  val collapseEvents: Boolean by remoteBoolean(
-    key = "android.collapseEvents.2",
-    defaultValue = false,
-    hotSwappable = true
-  )
-
-  /**
    * Whether the backups upgrade megaphone can be displayed
    */
   @JvmStatic
@@ -1442,27 +1395,6 @@ object RemoteConfig {
     hotSwappable = true
   )
 
-  /**
-   * A ratio between 0 and 1, where 0 means that a session is never archived due
-   * to a lack of PQ, and 1 means that a session is always archived due to a
-   * lack of PQ.
-   */
-  @JvmStatic
-  @get:JvmName("requirePqRatio")
-  val requirePqRatio: Double by remoteDouble(
-    key = "android.requirePqRatio",
-    defaultValue = 0.0,
-    hotSwappable = true
-  )
-
-  @JvmStatic
-  @get:JvmName("disappearMore")
-  val disappearMore: Boolean by remoteBoolean(
-    key = "android.disappearMore.2",
-    defaultValue = false,
-    hotSwappable = true
-  )
-
   /** A json string representing possible transcoding configurations for videos */
   @JvmStatic
   @get:JvmName("transcodeConfig")
@@ -1485,9 +1417,18 @@ object RemoteConfig {
   @JvmStatic
   @get:JvmName("useNewMediaSendFlow")
   val useNewMediaSendFlow: Boolean by remoteBoolean(
-    key = "android.useNewMediaSendFlow",
+    key = "android.useNewMediaSendFlow.2",
     defaultValue = false,
     hotSwappable = true
+  )
+
+  /** Whether to enable Jetpack telecom integration for 1:1 calls */
+  @JvmStatic
+  @get:JvmName("useJetPackTelecom")
+  val useJetPackTelecom: Boolean by remoteBoolean(
+    key = "android.calling.useJetPackTelecom",
+    defaultValue = false,
+    hotSwappable = false
   )
 
   // endregion

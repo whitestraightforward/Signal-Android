@@ -2,24 +2,21 @@
 
 | Field | Value |
 | --- | --- |
-| Version name | **8.22.2** |
-| Canonical version code | 1733 |
-| Upstream tag | [v8.22.2](https://github.com/signalapp/Signal-Android/releases/tag/v8.22.2) |
-| Previous project version | 8.15.3 (canonical 1707) |
+| Version name | **8.23.0** |
+| Canonical version code | 1734 |
+| Upstream tag | [v8.23.0](https://github.com/signalapp/Signal-Android/releases/tag/v8.23.0) |
+| Previous project version | 8.22.2 (canonical 1733) |
 
-## Highlights since 8.15.3
+## Highlights since 8.22.2
 
-- Linked Android tablets and linked Android phones
-- Disappearing call events when disappearing messages are enabled
-- Improved video quality and longer maximum sent video length
-- Admin message deletion, group suggestions, more pinned chats (up to 10)
-- Text selection for long “Read more” messages
-- Remote mute in group calls
-- Scheduled-message notifications in Note to Self
-- Background connectivity setting for devices without Play Services
-- End-to-end encrypted Signal secure backups
+- Redesigned media editor for tablets and foldable devices
+- Remove the audio track from a video before sending
+- Emoji handling extracted into `:lib:emoji`
+- libsignal-client 0.99.2 → 0.100.0
+- Conversation settings split into group / individual / shared modules
+- Recipient table migration `V325_AddBlockedAtToRecipientTable`
 
-This tree matches official Signal Android **v8.22.2**.
+This tree matches official Signal Android **v8.23.0**, plus the project’s existing APK-size, resource-shrink, and Gradle IDE-sync customizations.
 
 ## Android Studio sync: kotlin-dsl 6.4.2 verification error
 
