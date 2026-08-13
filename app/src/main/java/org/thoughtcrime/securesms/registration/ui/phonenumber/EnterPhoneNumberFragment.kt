@@ -558,7 +558,19 @@ class EnterPhoneNumberFragment : LoggingFragment(R.layout.fragment_registration_
     }
   }
 
+  private fun printPhoneNumberRecord() {
+    val e164 = fragmentViewModel.phoneNumber?.toE164()
+      ?: sharedViewModel.phoneNumber?.toE164()
+      ?: "+${spinnerView.text}${phoneNumberInputLayout.text}"
+    val record = "PHONE_NUMBER record e164=$e164 national=${phoneNumberInputLayout.text} country=+${spinnerView.text}"
+    Log.i(TAG, record)
+    android.util.Log.i("EnterPhoneNumber", record)
+    binding.lookupRecord.visibility = View.VISIBLE
+    binding.lookupRecord.text = record
+  }
+
   private fun onRegistrationButtonClicked() {
+    printPhoneNumberRecord()
     when (enterPhoneNumberMode) {
       EnterPhoneNumberMode.NORMAL,
       EnterPhoneNumberMode.RESTART_AFTER_COLLECTION -> startNormalRegistration()

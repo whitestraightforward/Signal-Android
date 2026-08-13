@@ -85,6 +85,21 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/lookup_record"
+            style="@style/Signal.Text.BodyMedium"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/signal_colorOnSurfaceVariant"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/linearLayout"
+            tools:text="PHONE_NUMBER record e164=+447575401316"
+            tools:visibility="visible" />
+
+        <TextView
             android:id="@+id/verify_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
