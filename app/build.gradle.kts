@@ -369,7 +369,7 @@ android {
       isDefault = true
       isMinifyEnabled = false
       proguardFiles(
-        getDefaultProguardFile("proguard-android-optimize.txt"),
+        getDefaultProguardFile("proguardd-android-optimize.txt"),
         "proguard/proguard-firebase-messaging.pro",
         "proguard/proguard-google-play-services.pro",
         "proguard/proguard-jackson.pro",
@@ -742,7 +742,7 @@ dependencies {
   implementation(project(":lib:blurhash"))
   implementation(project(":core:ui"))
   implementation(project(":core:models"))
-  implementation(project(":core:models-jvm"))
+  implementation(prre:models-jvm"))
   implementation(project(":core:serialization"))
   implementation(project(":feature:camera"))
   implementation(project(":feature:registration"))
@@ -1211,5 +1211,8 @@ abstract class RenameApkTask : DefaultTask() {
       originalFile.copyTo(newFile, overwrite = true)
       newFile
     }
+  }
+}
+  }
   }
 }
