@@ -367,7 +367,7 @@ android {
       isDefault = true
       isMinifyEnabled = false
       proguardFiles(
-        getDefaultProguardFile("proguardd-android-optimize.txt"),
+        getDefaultProguardFile("proguard-android-optimize.txt"),
         "proguard/proguard-firebase-messaging.pro",
         "proguard/proguard-google-play-services.pro",
         "proguard/proguard-jackson.pro",
