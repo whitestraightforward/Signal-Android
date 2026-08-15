@@ -43,7 +43,7 @@ class ThemeManager private constructor() {
     private var onCreateNightModeConfiguration: Int = Configuration.UI_MODE_NIGHT_UNDEFINED
 
     companion object {
-        private const val TAG = Log.tag(ThemeManager::class.java)
+        private val TAG = Log.tag(ThemeManager::class.java)
         private var globalNightModeConfiguration: Int = Configuration.UI_MODE_NIGHT_UNDEFINED
 
         @JvmStatic
@@ -54,11 +54,11 @@ class ThemeManager private constructor() {
         // ------------------------------------------------------------------
 
         @JvmStatic
-        fun getUserThemePreference(): SettingsValues.Theme = SignalStore.settings().theme
+        fun getUserThemePreference(): SettingsValues.Theme = SignalStore.settings.theme
 
         @JvmStatic
         fun setUserTheme(context: Context, theme: SettingsValues.Theme) {
-            SignalStore.settings().setTheme(theme)
+            SignalStore.settings.setTheme(theme)
             applyThemePreference(context)
         }
 
