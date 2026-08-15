@@ -55,13 +55,13 @@ enum class MainNavigationDestination(
     id = "settings",
     labelRes = R.string.ConversationListTabs__settings,
     iconRes = R.drawable.ic_settings_24,
-    isNewDestination = true
+    existingListLocation = MainNavigationListLocation.SETTINGS
   ),
   PROFILE(
     id = "profile",
     labelRes = R.string.ConversationListTabs__profile,
     iconRes = R.drawable.symbol_person_fill_24,
-    isNewDestination = true
+    existingListLocation = MainNavigationListLocation.PROFILE
   );
 
   /** Maps this destination back to [MainNavigationListLocation] if available. */

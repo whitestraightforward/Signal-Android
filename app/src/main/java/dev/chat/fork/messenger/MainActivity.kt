@@ -124,6 +124,8 @@ import dev.chat.fork.messenger.components.compose.ConnectivityWarningBottomSheet
 import dev.chat.fork.messenger.components.compose.DeviceSpecificNotificationBottomSheet
 import dev.chat.fork.messenger.components.settings.app.AppSettingsActivity
 import dev.chat.fork.messenger.components.settings.app.AppSettingsActivity.Companion.manageSubscriptions
+import dev.chat.fork.messenger.components.settings.app.AppSettingsFragment
+import dev.chat.fork.messenger.profiles.manage.EditProfileFragment
 import dev.chat.fork.messenger.components.settings.app.notifications.manual.NotificationProfileSelectionFragment
 import dev.chat.fork.messenger.components.settings.app.subscription.GooglePayComponent
 import dev.chat.fork.messenger.components.settings.app.subscription.GooglePayRepository
@@ -151,7 +153,6 @@ import dev.chat.fork.messenger.main.MainBottomChromeCallback
 import dev.chat.fork.messenger.main.MainBottomChromeState
 import dev.chat.fork.messenger.main.MainContentLayoutData
 import dev.chat.fork.messenger.main.MainMegaphoneState
-import dev.chat.fork.messenger.main.MainNavigationDestination
 import dev.chat.fork.messenger.main.MainNavigationBar
 import dev.chat.fork.messenger.main.MainNavigationDetailLocation
 import dev.chat.fork.messenger.main.MainNavigationListLocation
@@ -174,7 +175,6 @@ import dev.chat.fork.messenger.net.DeviceTransferBlockingInterceptor
 import dev.chat.fork.messenger.notifications.VitalsViewModel
 import dev.chat.fork.messenger.notifications.profiles.NotificationProfile
 import dev.chat.fork.messenger.notifications.profiles.NotificationProfiles
-import dev.chat.fork.messenger.profiles.manage.EditProfileActivity
 import dev.chat.fork.messenger.profiles.manage.UsernameEditFragment
 import dev.chat.fork.messenger.service.BackupMediaRestoreService
 import dev.chat.fork.messenger.service.KeyCachingService
@@ -395,6 +395,8 @@ class MainActivity :
           MainNavigationListLocation.ARCHIVE -> toolbarViewModel.presentToolbarForConversationListArchiveFragment()
           MainNavigationListLocation.CALLS -> toolbarViewModel.presentToolbarForCallLogFragment()
           MainNavigationListLocation.STORIES -> toolbarViewModel.presentToolbarForStoriesLandingFragment()
+          MainNavigationListLocation.SETTINGS -> toolbarViewModel.presentToolbarForSettings()
+          MainNavigationListLocation.PROFILE -> toolbarViewModel.presentToolbarForProfile()
         }
       }
 
@@ -579,17 +581,7 @@ class MainActivity :
                 MainNavigationBar(
                   state = mainNavigationState,
                   onDestinationSelected = mainNavigationCallback,
-                  onNewDestinationSelected = { destination ->
-                    when (destination) {
-                      MainNavigationDestination.SETTINGS -> {
-                        openSettings.launch(AppSettingsActivity.home(this@MainActivity))
-                      }
-                      MainNavigationDestination.PROFILE -> {
-                        startActivity(EditProfileActivity.getIntent(this@MainActivity))
-                      }
-                      else -> Unit
-                    }
-                  }
+                  selfRecipient = toolbarState.self
                 )
 
                 if (!LocalResources.current.rememberIsSplitPane()) {
@@ -665,6 +657,24 @@ class MainActivity :
                       modifier = Modifier.fillMaxSize()
                     )
                   }
+
+                  MainNavigationListLocation.SETTINGS -> {
+                    val state = key(destination) { rememberFragmentState() }
+                    AndroidFragment(
+                      clazz = AppSettingsFragment::class.java,
+                      fragmentState = state,
+                      modifier = Modifier.fillMaxSize()
+                    )
+                  }
+
+                  MainNavigationListLocation.PROFILE -> {
+                    val state = key(destination) { rememberFragmentState() }
+                    AndroidFragment(
+                      clazz = EditProfileFragment::class.java,
+                      fragmentState = state,
+                      modifier = Modifier.fillMaxSize()
+                    )
+                  }
                 }
 
                 MainBottomChrome(
@@ -724,6 +734,10 @@ class MainActivity :
                     ),
                     entryProvider = entryProvider { storiesNavEntries() }
                   )
+                }
+
+                MainNavigationListLocation.SETTINGS, MainNavigationListLocation.PROFILE -> {
+                  // Settings and Profile are full-pane views with no detail pane
                 }
               }
             }
@@ -876,6 +890,8 @@ class MainActivity :
           mainNavigationViewModel.onStoriesSelected()
         }
       }
+      MainNavigationListLocation.SETTINGS -> mainNavigationViewModel.onSettingsSelected()
+      MainNavigationListLocation.PROFILE -> mainNavigationViewModel.onProfileSelected()
 
       null -> Unit
     }
@@ -1336,6 +1352,8 @@ class MainActivity :
         MainNavigationListLocation.CALLS -> mainNavigationViewModel.onCallsSelected()
         MainNavigationListLocation.STORIES -> mainNavigationViewModel.onStoriesSelected()
         MainNavigationListLocation.ARCHIVE -> mainNavigationViewModel.onArchiveSelected()
+        MainNavigationListLocation.SETTINGS -> mainNavigationViewModel.onSettingsSelected()
+        MainNavigationListLocation.PROFILE -> mainNavigationViewModel.onProfileSelected()
       }
     }
   }

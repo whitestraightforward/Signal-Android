@@ -180,6 +180,8 @@ private fun PrimaryActionButton(
       MainNavigationListLocation.STORIES -> {
         { onCameraClick(destination) }
       }
+      MainNavigationListLocation.SETTINGS -> { {} }
+      MainNavigationListLocation.PROFILE -> { {} }
     }
   }
 
@@ -193,6 +195,8 @@ private fun PrimaryActionButton(
           MainNavigationListLocation.CHATS -> CoreUiR.drawable.symbol_edit_24 to R.string.conversation_list_fragment__fab_content_description
           MainNavigationListLocation.CALLS -> R.drawable.symbol_phone_plus_24 to R.string.CallLogFragment__start_a_new_call
           MainNavigationListLocation.STORIES -> CoreUiR.drawable.symbol_camera_24 to R.string.conversation_list_fragment__open_camera_description
+          MainNavigationListLocation.SETTINGS -> CoreUiR.drawable.symbol_edit_24 to R.string.conversation_list_fragment__fab_content_description
+          MainNavigationListLocation.PROFILE -> CoreUiR.drawable.symbol_edit_24 to R.string.conversation_list_fragment__fab_content_description
         }
 
         Icon(

@@ -68,6 +68,8 @@ import org.signal.core.ui.compose.Previews
 import org.signal.core.ui.compose.theme.Dimensions
 import org.signal.core.ui.compose.theme.SignalTheme
 import dev.chat.fork.messenger.R
+import dev.chat.fork.messenger.avatar.AvatarImage
+import dev.chat.fork.messenger.recipients.Recipient
 
 private val LOTTIE_SIZE = 28.dp
 
@@ -95,6 +97,14 @@ enum class MainNavigationListLocation(
   STORIES(
     label = R.string.ConversationListTabs__stories,
     icon = R.raw.stories_28
+  ),
+  SETTINGS(
+    label = R.string.ConversationListTabs__settings,
+    icon = R.raw.settings_28
+  ),
+  PROFILE(
+    label = R.string.ConversationListTabs__profile,
+    icon = R.raw.profile_28
   );
 
   val isChatsTab: Boolean
@@ -139,7 +149,8 @@ fun MainNavigationBar(
   state: MainNavigationState,
   onDestinationSelected: (MainNavigationListLocation) -> Unit,
   onNewDestinationSelected: (MainNavigationDestination) -> Unit = {},
-  menuConfig: NavigationMenuConfig = NavigationMenuConfig.default()
+  menuConfig: NavigationMenuConfig = NavigationMenuConfig.default(),
+  selfRecipient: Recipient = Recipient.UNKNOWN
 ) {
   val navItems = NavigationMenuProvider.getItems(
     currentDestination = state.currentListLocation,
@@ -173,6 +184,7 @@ fun MainNavigationBar(
         FloatingNavigationBarItem(
           item = item,
           compact = state.compact,
+          selfRecipient = selfRecipient,
           onSelected = {
             val listLocation = item.destination.toListLocationOrNull()
             if (listLocation != null) {
@@ -194,6 +206,7 @@ fun MainNavigationBar(
 private fun RowScope.FloatingNavigationBarItem(
   item: NavigationMenuItemData,
   compact: Boolean,
+  selfRecipient: Recipient,
   onSelected: () -> Unit
 ) {
   val isSelected = item.isSelected
@@ -244,12 +257,22 @@ private fun RowScope.FloatingNavigationBarItem(
       verticalArrangement = Arrangement.Center
     ) {
       Box(contentAlignment = Alignment.TopEnd) {
-        Icon(
-          painter = painterResource(id = item.destination.iconRes),
-          contentDescription = stringResource(item.destination.labelRes),
-          tint = iconTint,
-          modifier = Modifier.size(if (compact) 22.dp else 24.dp)
-        )
+        if (item.destination == MainNavigationDestination.PROFILE) {
+          AvatarImage(
+            recipient = selfRecipient,
+            modifier = Modifier
+              .size(if (compact) 26.dp else 28.dp)
+              .clip(CircleShape),
+            contentDescription = stringResource(item.destination.labelRes)
+          )
+        } else {
+          Icon(
+            painter = painterResource(id = item.destination.iconRes),
+            contentDescription = stringResource(item.destination.labelRes),
+            tint = iconTint,
+            modifier = Modifier.size(if (compact) 22.dp else 24.dp)
+          )
+        }
 
         if (item.badgeCount > 0) {
           if (item.badgeCount < 100) {
@@ -352,11 +375,15 @@ fun MainNavigationRail(
     Spacer(modifier = Modifier.height(40.dp).weight(1f, fill = false))
 
     val entries = remember(state.isStoriesFeatureEnabled) {
-      if (state.isStoriesFeatureEnabled) {
-        MainNavigationListLocation.entries.filterNot { it == MainNavigationListLocation.ARCHIVE }
-      } else {
-        MainNavigationListLocation.entries.filterNot { it == MainNavigationListLocation.STORIES || it == MainNavigationListLocation.ARCHIVE }
+      val hiddenTabs = mutableSetOf(
+        MainNavigationListLocation.ARCHIVE,
+        MainNavigationListLocation.SETTINGS,
+        MainNavigationListLocation.PROFILE
+      )
+      if (!state.isStoriesFeatureEnabled) {
+        hiddenTabs.add(MainNavigationListLocation.STORIES)
       }
+      MainNavigationListLocation.entries.filterNot { it in hiddenTabs }
     }
 
     val selectedDestination = if (state.currentListLocation == MainNavigationListLocation.ARCHIVE) {
@@ -412,6 +439,8 @@ private fun BoxScope.NavigationRailCountIndicator(
       MainNavigationListLocation.CHATS -> state.chatsCount
       MainNavigationListLocation.CALLS -> state.callsCount
       MainNavigationListLocation.STORIES -> state.storiesCount
+      MainNavigationListLocation.SETTINGS -> 0
+      MainNavigationListLocation.PROFILE -> 0
     }
   }
 
