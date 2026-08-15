@@ -44,7 +44,7 @@ public final class ConversationUtil {
 
   public static final int CONVERSATION_SUPPORT_VERSION = 30;
 
-  private static final String CATEGORY_SHARE_TARGET = "org.thoughtcrime.securesms.sharing.CATEGORY_SHARE_TARGET";
+  private static final String CATEGORY_SHARE_TARGET = "dev.chat.fork.messenger.sharing.CATEGORY_SHARE_TARGET";
 
   private static final String CAPABILITY_SEND_MESSAGE    = "actions.intent.SEND_MESSAGE";
   private static final String CAPABILITY_RECEIVE_MESSAGE = "actions.intent.RECEIVE_MESSAGE";

@@ -263,6 +263,8 @@ android {
   }
 
   defaultConfig {
+    applicationId = "dev.chat.fork.messenger"
+
     if (currentHotfixVersion >= maxHotfixVersions) {
       throw AssertionError("Hotfix version offset is too large!")
     }

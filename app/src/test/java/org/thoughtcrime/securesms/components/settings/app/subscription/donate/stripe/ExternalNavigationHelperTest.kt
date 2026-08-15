@@ -20,7 +20,7 @@ class ExternalNavigationHelperTest {
   @Test
   fun `sanitizeWebIntent clears explicit component`() {
     val intent = Intent().apply {
-      component = ComponentName("org.thoughtcrime.securesms", "org.thoughtcrime.securesms.FakeInternalActivity")
+      component = ComponentName("dev.chat.fork.messenger", "org.thoughtcrime.securesms.FakeInternalActivity")
     }
 
     val sanitized = with(ExternalNavigationHelper) { intent.sanitizeWebIntent() }
@@ -90,7 +90,7 @@ class ExternalNavigationHelperTest {
 
   @Test
   fun `parsed web intent URI loses explicit component after sanitization`() {
-    val uri = "intent://x#Intent;component=org.thoughtcrime.securesms/.sharing.v2.ShareActivity;action=android.intent.action.SEND;end"
+    val uri = "intent://x#Intent;component=dev.chat.fork.messenger/.sharing.v2.ShareActivity;action=android.intent.action.SEND;end"
     val parsed = Intent.parseUri(uri, Intent.URI_INTENT_SCHEME)
     assertNotNull("Test precondition: parsed URI should set the component", parsed.component)
 

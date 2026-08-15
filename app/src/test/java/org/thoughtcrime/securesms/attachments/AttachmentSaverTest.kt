@@ -49,14 +49,14 @@ class AttachmentSaverTest {
 
   private val testAttachments: Set<SaveAttachmentUtil.SaveAttachment> = setOf(
     SaveAttachmentUtil.SaveAttachment(
-      uri = Uri.parse("content://org.thoughtcrime.securesms/part/111"),
+      uri = Uri.parse("content://dev.chat.fork.messenger/part/111"),
       contentType = "image/jpeg",
       date = 1742234803832,
       fileName = null
     ),
 
     SaveAttachmentUtil.SaveAttachment(
-      uri = Uri.parse("content://org.thoughtcrime.securesms/part/222"),
+      uri = Uri.parse("content://dev.chat.fork.messenger/part/222"),
       contentType = "image/jpeg",
       date = 1742234384758,
       fileName = null
