@@ -111,7 +111,7 @@
     <dimen name="conversation_list_fragment_archive_padding">12dp</dimen>
     <dimen name="contact_selection_actions_tap_area">10dp</dimen>
 
-    <dimen name="unread_count_bubble_radius">12.5dp</dimen>
+    <dimen name="unread_count_bubble_radius">10dp</dimen>
 
     <dimen name="invite_edit_text_min_height">84dp</dimen>
 
@@ -178,6 +178,17 @@
 
     <dimen name="bank_transfer_mandate_gutter">16dp</dimen>
     <dimen name="dsl_settings_gutter">16dp</dimen>
+
+    <!-- UX modernization tokens (bridge to core/ui Dimensions) -->
+    <dimen name="signal_list_row_min_height">80dp</dimen>
+    <dimen name="signal_list_row_vertical_padding">12dp</dimen>
+    <dimen name="signal_list_avatar_size">52dp</dimen>
+    <dimen name="signal_radius_medium">12dp</dimen>
+    <dimen name="signal_radius_large">18dp</dimen>
+    <dimen name="signal_unread_badge_min_size">20dp</dimen>
+    <dimen name="signal_empty_state_icon_size">72dp</dimen>
+    <dimen name="signal_empty_state_horizontal_margin">32dp</dimen>
+    <dimen name="signal_empty_state_vertical_margin">48dp</dimen>
     <dimen name="active_subscription_gutter_start">14dp</dimen>
     <dimen name="media_overview_toggle_gutter">2dp</dimen>
     <dimen name="wallpaper_selection_gutter">8dp</dimen>
@@ -193,7 +204,7 @@
 
     <dimen name="toolbar_avatar_size">28dp</dimen>
     <dimen name="toolbar_avatar_margin">26dp</dimen>
-    <dimen name="conversation_list_avatar_size">48dp</dimen>
+    <dimen name="conversation_list_avatar_size">@dimen/signal_list_avatar_size</dimen>
 
     <dimen name="verify_identity_vertical_margin">26dp</dimen>
 

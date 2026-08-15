@@ -76,6 +76,8 @@ import org.signal.core.ui.compose.SignalIcons
 import org.signal.core.ui.compose.TextFields
 import org.signal.core.ui.compose.Tooltips
 import org.signal.core.ui.compose.circularReveal
+import org.signal.core.ui.compose.theme.Dimensions
+import org.signal.core.ui.compose.theme.SignalTheme
 import dev.chat.fork.messenger.R
 import dev.chat.fork.messenger.avatar.AvatarImage
 import dev.chat.fork.messenger.calls.log.CallLogFilter
@@ -349,7 +351,8 @@ private fun ArchiveToolbar(
 ) {
   TopAppBar(
     colors = TopAppBarDefaults.topAppBarColors(
-      containerColor = state.toolbarColor ?: MaterialTheme.colorScheme.surface
+      containerColor = state.toolbarColor ?: MaterialTheme.colorScheme.surface,
+      scrolledContainerColor = SignalTheme.colors.colorSurface2
     ),
     navigationIcon = {
       IconButtons.IconButton(onClick = {
@@ -362,7 +365,10 @@ private fun ArchiveToolbar(
       }
     },
     title = {
-      Text(text = stringResource(R.string.AndroidManifest_archived_conversations))
+      Text(
+        text = stringResource(R.string.AndroidManifest_archived_conversations),
+        style = MaterialTheme.typography.titleLarge
+      )
     }
   )
 }
@@ -377,21 +383,22 @@ private fun PrimaryToolbar(
 ) {
   TopAppBar(
     colors = TopAppBarDefaults.topAppBarColors(
-      containerColor = state.toolbarColor ?: MaterialTheme.colorScheme.surface
+      containerColor = state.toolbarColor ?: MaterialTheme.colorScheme.surface,
+      scrolledContainerColor = SignalTheme.colors.colorSurface2
     ),
     navigationIcon = {
       val contentDescription = stringResource(R.string.conversation_list_settings_shortcut)
       Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-          .padding(start = 20.dp, end = 16.dp)
-          .size(48.dp)
+          .padding(start = Dimensions.space5, end = Dimensions.space4)
+          .size(Dimensions.minTouchTarget)
       ) {
         AvatarImage(
           recipient = state.self,
           modifier = Modifier
             .clip(CircleShape)
-            .size(28.dp),
+            .size(Dimensions.toolbarAvatarSize),
           contentDescription = contentDescription
         )
 
@@ -403,7 +410,7 @@ private fun PrimaryToolbar(
               enabled = enabled,
               onClick = callback::onSettingsClick,
               interactionSource = interactionSource,
-              indication = ripple(radius = 14.dp)
+              indication = ripple(radius = 16.dp)
             )
             .semantics {
               this.contentDescription = contentDescription
@@ -416,18 +423,19 @@ private fun PrimaryToolbar(
           badge = badge,
           modifier = Modifier
             .padding(start = 14.dp, top = 16.dp)
-            .size(16.dp)
+            .size(Dimensions.space4)
         )
 
         HeadsUpIndicator(
           state = state,
-          modifier = Modifier.padding(start = 20.dp, bottom = 20.dp)
+          modifier = Modifier.padding(start = Dimensions.space5, bottom = Dimensions.space5)
         )
       }
     },
     title = {
       Text(
-        text = stringResource(R.string.app_name)
+        text = stringResource(R.string.app_name),
+        style = MaterialTheme.typography.titleLarge
       )
     },
     actions = {

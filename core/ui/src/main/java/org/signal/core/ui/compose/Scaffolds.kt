@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import org.signal.core.ui.compose.theme.Dimensions
 import org.signal.core.ui.compose.theme.SignalTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -135,7 +136,7 @@ object Scaffolds {
         if (navigationIcon != null) {
           IconButton(
             onClick = onNavigationClick,
-            Modifier.padding(end = 16.dp)
+            Modifier.padding(end = Dimensions.space4)
           ) {
             Icon(
               imageVector = navigationIcon,

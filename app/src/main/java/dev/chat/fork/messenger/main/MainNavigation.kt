@@ -56,6 +56,7 @@ import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
 import org.signal.core.ui.compose.DayNightPreviews
 import org.signal.core.ui.compose.Previews
+import org.signal.core.ui.compose.theme.Dimensions
 import org.signal.core.ui.compose.theme.SignalTheme
 import dev.chat.fork.messenger.R
 
@@ -108,7 +109,10 @@ fun MainNavigationBar(
   NavigationBar(
     containerColor = SignalTheme.colors.colorSurface2,
     contentColor = MaterialTheme.colorScheme.onSurface,
-    modifier = Modifier.height(if (state.compact) 48.dp else 80.dp),
+    tonalElevation = Dimensions.elevationNone,
+    modifier = Modifier.height(
+      if (state.compact) Dimensions.navigationBarHeightCompact else Dimensions.navigationBarHeight
+    ),
     windowInsets = WindowInsets(0, 0, 0, 0)
   ) {
     val entries = remember(state.isStoriesFeatureEnabled) {
@@ -249,7 +253,13 @@ fun MainNavigationRail(
 
       Box {
         NavigationRailItem(
-          modifier = Modifier.padding(bottom = if (MainNavigationListLocation.entries.lastIndex == idx) 0.dp else 16.dp),
+          modifier = Modifier.padding(
+            bottom = if (MainNavigationListLocation.entries.lastIndex == idx) {
+              Dimensions.space0
+            } else {
+              Dimensions.navigationRailItemSpacing
+            }
+          ),
           icon = {
             NavigationDestinationIcon(
               destination = destination,

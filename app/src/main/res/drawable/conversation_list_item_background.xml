@@ -13,12 +13,12 @@
         <inset
             android:insetLeft="12dp"
             android:insetRight="12dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp">
+            android:insetTop="1dp"
+            android:insetBottom="1dp">
 
             <shape android:shape="rectangle">
                 <solid android:color="@color/signal_colorSecondaryContainer" />
-                <corners android:radius="18dp" />
+                <corners android:radius="@dimen/signal_radius_large" />
             </shape>
         </inset>
     </item>
@@ -32,7 +32,7 @@
 
             <shape android:shape="rectangle">
                 <solid android:color="@color/conversation_list_selected_color" />
-                <corners android:radius="18dp" />
+                <corners android:radius="@dimen/signal_radius_large" />
             </shape>
         </inset>
     </item>
@@ -48,7 +48,7 @@
 
                     <shape android:shape="rectangle">
                         <solid android:color="@color/transparent_black_60" />
-                        <corners android:radius="18dp" />
+                        <corners android:radius="@dimen/signal_radius_large" />
                     </shape>
                 </inset>
             </item>

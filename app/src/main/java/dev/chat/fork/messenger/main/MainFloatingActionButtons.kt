@@ -39,14 +39,16 @@ import androidx.compose.ui.unit.dp
 import org.signal.core.ui.compose.DayNightPreviews
 import org.signal.core.ui.compose.Previews
 import org.signal.core.ui.compose.SignalIcons
+import org.signal.core.ui.compose.theme.Dimensions
 import org.signal.core.ui.compose.theme.SignalTheme
 import dev.chat.fork.messenger.R
 import dev.chat.fork.messenger.window.NavigationType
 import kotlin.math.roundToInt
 import org.signal.core.ui.R as CoreUiR
 
-private val ACTION_BUTTON_SIZE = 56.dp
-private val ACTION_BUTTON_SPACING = 16.dp
+private val ACTION_BUTTON_SIZE = Dimensions.fabSize
+private val ACTION_BUTTON_SPACING = Dimensions.fabSpacing
+private val ACTION_BUTTON_RADIUS = Dimensions.radiusLarge
 
 interface MainFloatingActionButtonsCallback {
   fun onNewChatClick()
@@ -81,8 +83,8 @@ fun MainFloatingActionButtons(
 
   val shadowElevation: Dp = remember(navigationType) {
     when (navigationType) {
-      NavigationType.RAIL -> 0.dp
-      NavigationType.BAR -> 4.dp
+      NavigationType.RAIL -> Dimensions.elevationNone
+      NavigationType.BAR -> Dimensions.elevationMedium
     }
   }
 
@@ -206,7 +208,7 @@ private fun PrimaryActionButton(
 private fun CameraButton(
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
-  shadowElevation: Dp = 4.dp,
+  shadowElevation: Dp = Dimensions.elevationMedium,
   colors: IconButtonColors = IconButtonDefaults.filledTonalIconButtonColors()
 ) {
   MainFloatingActionButton(
@@ -228,15 +230,16 @@ private fun MainFloatingActionButton(
   onClick: () -> Unit,
   icon: @Composable () -> Unit,
   modifier: Modifier = Modifier,
-  shadowElevation: Dp = 4.dp,
+  shadowElevation: Dp = Dimensions.elevationMedium,
   colors: IconButtonColors = IconButtonDefaults.filledTonalIconButtonColors()
 ) {
+  val shape = RoundedCornerShape(ACTION_BUTTON_RADIUS)
   FilledTonalIconButton(
     onClick = onClick,
-    shape = RoundedCornerShape(18.dp),
+    shape = shape,
     modifier = modifier
       .size(ACTION_BUTTON_SIZE)
-      .shadow(shadowElevation, RoundedCornerShape(18.dp)),
+      .shadow(shadowElevation, shape),
     enabled = true,
     colors = colors
   ) {

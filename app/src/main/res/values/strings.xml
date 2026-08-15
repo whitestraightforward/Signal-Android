@@ -2919,6 +2919,8 @@
     <string name="SearchFragment_no_results">No results found for \'%s\'</string>
     <!-- Text shown when no search results are found.   -->
     <string name="SearchFragment_no_results_empty">No results found</string>
+    <!-- Supporting text under the empty search state -->
+    <string name="conversation_list_empty_search__try_a_different_name_or_number">Try a different name, number, or keyword.</string>
 
     <!-- ShakeToReport -->
     <string name="ShakeToReport_shake_detected" translatable="false">Shake detected</string>
