@@ -4,11 +4,12 @@ import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
@@ -18,7 +19,11 @@ import androidx.compose.ui.unit.sp
 import org.signal.core.ui.CoreUiDependencies
 import org.signal.core.ui.compose.ProvideIncognitoKeyboard
 
-private val typography = Typography().run {
+// ============================================================================
+// Typography - Material 3 compatible with Signal overrides
+// ============================================================================
+
+private val typography = androidx.compose.material3.Typography().run {
   copy(
     headlineLarge = headlineLarge.copy(
       fontSize = 32.sp,
@@ -79,6 +84,10 @@ private val typography = Typography().run {
     )
   )
 }
+
+// ============================================================================
+// Material 3 Color Schemes (existing)
+// ============================================================================
 
 private val lightColorScheme = lightColorScheme(
   primary = Color(0xFF2C58C3),
@@ -194,6 +203,46 @@ private val darkSnackbarColors = SnackbarColors(
   dismissActionContentColor = darkColorScheme.onSurfaceVariant
 )
 
+// ============================================================================
+// Main Theme Composable - Integrates all token systems
+// ============================================================================
+
+/**
+ * The main Signal theme composable that provides all design tokens.
+ *
+ * This composable provides:
+ * - Material 3 color scheme (light/dark)
+ * - Extended color tokens (custom surfaces, transparency, etc.)
+ * - Signal color scheme (comprehensive semantic color tokens)
+ * - Typography tokens
+ * - Spacing tokens
+ * - Shape tokens
+ * - Motion tokens
+ * - Shadow tokens
+ * - Interactive state tokens
+ * - Snackbar colors
+ *
+ * All tokens are provided via CompositionLocal and can be accessed through:
+ * - [SignalTheme.colors] - Extended colors (backward compatible)
+ * - [SignalTheme.tokens] - All new token systems
+ *
+ * Example usage:
+ * ```kotlin
+ * SignalTheme(isDarkMode = isDark) {
+ *   // Access colors
+ *   SignalTheme.colors.colorSurface1
+ *
+ *   // Access comprehensive token system
+ *   SignalTheme.tokens.colors.brand.primary
+ *   SignalTheme.tokens.typography.bodyMedium
+ *   SignalTheme.tokens.spacing.space4
+ *   SignalTheme.tokens.shapes.radiusMedium
+ *   SignalTheme.tokens.motion.durationMedium1
+ *   SignalTheme.tokens.shadows.elevationMedium
+ *   SignalTheme.tokens.interactive.buttonDefault
+ * }
+ * ```
+ */
 @Composable
 fun SignalTheme(
   isDarkMode: Boolean = LocalConfiguration.current.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES,
@@ -202,11 +251,31 @@ fun SignalTheme(
 ) {
   val extendedColors = if (isDarkMode) darkExtendedColors else lightExtendedColors
   val snackbarColors = if (isDarkMode) darkSnackbarColors else lightSnackbarColors
+  val colorScheme = if (isDarkMode) darkColorScheme else lightColorScheme
+  val signalColorScheme = if (isDarkMode) createDarkColorScheme() else createLightColorScheme()
+  val signalTypography = signalTypography()
+  val signalSpacing = signalSpacing()
+  val signalShapes = signalShapes()
+  val signalShadows = signalShadows()
+  val signalInteractive = signalInteractiveStates(signalColorScheme)
+  val signalComponentTokens = createDefaultComponentTokens(signalColorScheme)
 
   ProvideIncognitoKeyboard(enabled = incognitoKeyboardEnabled) {
-    CompositionLocalProvider(LocalExtendedColors provides extendedColors, LocalSnackbarColors provides snackbarColors) {
+    CompositionLocalProvider(
+      // Existing
+      LocalExtendedColors provides extendedColors,
+      LocalSnackbarColors provides snackbarColors,
+      // New token systems
+      LocalSignalColorScheme provides signalColorScheme,
+      LocalSignalTypography provides signalTypography,
+      LocalSignalSpacing provides signalSpacing,
+      LocalSignalShapes provides signalShapes,
+      LocalSignalShadows provides signalShadows,
+      LocalSignalInteractiveStates provides signalInteractive,
+      LocalSignalComponentTokens provides signalComponentTokens
+    ) {
       MaterialTheme(
-        colorScheme = if (isDarkMode) darkColorScheme else lightColorScheme,
+        colorScheme = colorScheme,
         typography = typography,
         content = content
       )
@@ -215,17 +284,59 @@ fun SignalTheme(
 }
 
 /**
- * Applies the light color scheme to [content] regardless of the ambient theme, leaving typography and shapes untouched.
+ * Applies the light color scheme to [content] regardless of the ambient theme,
+ * leaving typography and shapes untouched.
  */
 @Composable
 fun ForceLightColors(content: @Composable () -> Unit) {
-  CompositionLocalProvider(LocalExtendedColors provides lightExtendedColors) {
+  CompositionLocalProvider(
+    LocalExtendedColors provides lightExtendedColors,
+    LocalSignalColorScheme provides createLightColorScheme()
+  ) {
     MaterialTheme(
       colorScheme = lightColorScheme,
       content = content
     )
   }
 }
+
+// ============================================================================
+// Backward-Compatible Theme Object
+// ============================================================================
+
+/**
+ * Main theme accessor object.
+ *
+ * Provides backward-compatible access to extended colors via [SignalTheme.colors],
+ * and also provides access to the comprehensive token system via [SignalTheme.tokens].
+ *
+ * Legacy usage (backward compatible):
+ * ```kotlin
+ * SignalTheme.colors.colorSurface1
+ * ```
+ *
+ * New usage (comprehensive):
+ * ```kotlin
+ * SignalTheme.tokens.colors.brand.primary
+ * SignalTheme.tokens.typography.bodyMedium
+ * SignalTheme.tokens.spacing.space4
+ * ```
+ */
+object SignalTheme {
+  /** Backward-compatible access to extended colors. */
+  val colors: ExtendedColors
+    @Composable
+    get() = LocalExtendedColors.current
+
+  /** Access to all comprehensive theme tokens. */
+  val tokens: SignalThemeTokens
+    @Composable
+    get() = SignalThemeTokens
+}
+
+// ============================================================================
+// Preview
+// ============================================================================
 
 @Preview(showBackground = true)
 @Composable
@@ -236,11 +347,11 @@ private fun TypographyPreview() {
   ) {
     Column {
       Text(
-        text = "Headline Small",
+        text = "Headline Large",
         style = MaterialTheme.typography.headlineLarge
       )
       Text(
-        text = "Headline Small",
+        text = "Headline Medium",
         style = MaterialTheme.typography.headlineMedium
       )
       Text(
@@ -285,10 +396,4 @@ private fun TypographyPreview() {
       )
     }
   }
-}
-
-object SignalTheme {
-  val colors: ExtendedColors
-    @Composable
-    get() = LocalExtendedColors.current
 }

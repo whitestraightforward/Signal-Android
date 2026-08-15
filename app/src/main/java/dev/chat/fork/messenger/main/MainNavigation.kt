@@ -7,23 +7,33 @@ package dev.chat.fork.messenger.main
 
 import androidx.annotation.RawRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,28 +42,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.BlendModeColorFilterCompat
-import androidx.core.graphics.BlendModeCompat
+import androidx.compose.ui.unit.sp
 import com.airbnb.lottie.LottieProperty
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.airbnb.lottie.compose.rememberLottieDynamicProperties
 import com.airbnb.lottie.compose.rememberLottieDynamicProperty
+import androidx.core.graphics.BlendModeColorFilterCompat
+import androidx.core.graphics.BlendModeCompat
 import org.signal.core.ui.compose.DayNightPreviews
 import org.signal.core.ui.compose.Previews
 import org.signal.core.ui.compose.theme.Dimensions
@@ -61,6 +69,10 @@ import org.signal.core.ui.compose.theme.SignalTheme
 import dev.chat.fork.messenger.R
 
 private val LOTTIE_SIZE = 28.dp
+
+// ============================================================================
+// Legacy enum — preserved for backward compatibility.
+// ============================================================================
 
 enum class MainNavigationListLocation(
   @StringRes val label: Int,
@@ -88,6 +100,10 @@ enum class MainNavigationListLocation(
     get() = this == CHATS || this == ARCHIVE
 }
 
+// ============================================================================
+// State container (unchanged signature — full backward compat).
+// ============================================================================
+
 data class MainNavigationState(
   val chatsCount: Int = 0,
   val callsCount: Int = 0,
@@ -98,14 +114,40 @@ data class MainNavigationState(
   val compact: Boolean = false
 )
 
+// ============================================================================
+// Telegram-inspired Modern Bottom Navigation Bar
+// ============================================================================
+
 /**
- * Chats list bottom navigation bar.
+ * Modern bottom navigation bar inspired by Telegram's navigation design.
+ *
+ * Features:
+ * - Clean icon + label layout with subtle active indicator
+ * - Smooth color transitions between selected/unselected states
+ * - Dot-style badge indicators (like Telegram) instead of pill badges
+ * - Flexible menu configuration via [NavigationMenuConfig]
+ * - Support for new destinations (CONTACTS, SETTINGS) via callbacks
+ * - Full backward compatibility with [MainNavigationListLocation]
+ *
+ * When a user taps a new destination (CONTACTS, SETTINGS), the [onNewDestinationSelected]
+ * callback is invoked instead of [onDestinationSelected].
  */
 @Composable
 fun MainNavigationBar(
   state: MainNavigationState,
-  onDestinationSelected: (MainNavigationListLocation) -> Unit
+  onDestinationSelected: (MainNavigationListLocation) -> Unit,
+  onNewDestinationSelected: (MainNavigationDestination) -> Unit = {},
+  menuConfig: NavigationMenuConfig = NavigationMenuConfig.default()
 ) {
+  val navItems = NavigationMenuProvider.getItems(
+    currentDestination = state.currentListLocation,
+    chatsBadge = state.chatsCount,
+    callsBadge = state.callsCount,
+    storiesBadge = state.storiesCount,
+    isStoriesEnabled = state.isStoriesFeatureEnabled,
+    config = menuConfig
+  )
+
   NavigationBar(
     containerColor = SignalTheme.colors.colorSurface2,
     contentColor = MaterialTheme.colorScheme.onSurface,
@@ -115,106 +157,150 @@ fun MainNavigationBar(
     ),
     windowInsets = WindowInsets(0, 0, 0, 0)
   ) {
-    val entries = remember(state.isStoriesFeatureEnabled) {
-      if (state.isStoriesFeatureEnabled) {
-        MainNavigationListLocation.entries.filterNot { it == MainNavigationListLocation.ARCHIVE }
-      } else {
-        MainNavigationListLocation.entries.filterNot { it == MainNavigationListLocation.STORIES || it == MainNavigationListLocation.ARCHIVE }
-      }
-    }
-
-    entries.forEach { destination ->
-
-      val badgeCount = when (destination) {
-        MainNavigationListLocation.ARCHIVE -> error("Not supported")
-        MainNavigationListLocation.CHATS -> state.chatsCount
-        MainNavigationListLocation.CALLS -> state.callsCount
-        MainNavigationListLocation.STORIES -> state.storiesCount
-      }
-
-      val selected = state.currentListLocation == destination
-      NavigationBarItem(
-        selected = selected,
-        icon = {
-          NavigationDestinationIcon(
-            destination = destination,
-            selected = selected
-          )
-        },
-        label = if (state.compact) null else {
-          { NavigationDestinationLabel(destination) }
-        },
-        onClick = {
-          onDestinationSelected(destination)
-        },
-        modifier = Modifier.drawNavigationBarBadge(count = badgeCount, compact = state.compact)
+    navItems.forEach { item ->
+      ModernNavigationBarItem(
+        item = item,
+        compact = state.compact,
+        onSelected = {
+          val listLocation = item.destination.toListLocationOrNull()
+          if (listLocation != null) {
+            onDestinationSelected(listLocation)
+          } else {
+            onNewDestinationSelected(item.destination)
+          }
+        }
       )
     }
   }
 }
 
 /**
- * Draws badge over navigation bar item. We do this since they're required to be inside a row,
- * and things get really funky or clip weird if we try to use a normal composable.
+ * A single item in the modern navigation bar.
  */
 @Composable
-private fun Modifier.drawNavigationBarBadge(count: Int, compact: Boolean): Modifier {
-  return if (count <= 0) {
-    this
-  } else {
-    val formatted = formatCount(count)
-    val textMeasurer = rememberTextMeasurer()
-    val color = colorResource(R.color.ConversationListTabs__unread)
-    val textStyle = MaterialTheme.typography.labelMedium
-    val textLayoutResult = remember(formatted) {
-      textMeasurer.measure(formatted, textStyle)
-    }
+private fun RowScope.ModernNavigationBarItem(
+  item: NavigationMenuItemData,
+  compact: Boolean,
+  onSelected: () -> Unit
+) {
+  val isSelected = item.isSelected
+  val iconTint by animateColorAsState(
+    targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+    animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+    label = "navIconTint"
+  )
+  val labelAlpha by animateFloatAsState(
+    targetValue = if (isSelected) 1f else 0.6f,
+    animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
+    label = "navLabelAlpha"
+  )
 
-    var size by remember { mutableStateOf(IntSize.Zero) }
+  Box(
+    modifier = Modifier
+      .height(if (compact) 56.dp else 80.dp)
+      .weight(1f)
+      .clickable(
+        interactionSource = remember { MutableInteractionSource() },
+        indication = null,
+        onClick = onSelected
+      ),
+    contentAlignment = Alignment.Center
+  ) {
+    Column(
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.Center
+    ) {
+      // Icon with dot badge
+      Box(contentAlignment = Alignment.TopEnd) {
+        Icon(
+          painter = painterResource(id = item.destination.iconRes),
+          contentDescription = stringResource(item.destination.labelRes),
+          tint = iconTint,
+          modifier = Modifier.size(24.dp)
+        )
 
-    val padding = with(LocalDensity.current) {
-      4.dp.toPx()
-    }
-
-    val xOffsetExtra = with(LocalDensity.current) {
-      4.dp.toPx()
-    }
-
-    val yOffset = with(LocalDensity.current) {
-      if (compact) 6.dp.toPx() else 10.dp.toPx()
-    }
-
-    this
-      .onSizeChanged {
-        size = it
-      }
-      .drawWithContent {
-        drawContent()
-
-        val xOffset = size.width.toFloat() / 2f + xOffsetExtra
-        val yRadius = size.height.toFloat() / 2f
-
-        if (size != IntSize.Zero) {
-          drawRoundRect(
-            color = color,
-            topLeft = Offset(xOffset, yOffset),
-            size = Size(textLayoutResult.size.width.toFloat() + padding * 2, textLayoutResult.size.height.toFloat()),
-            cornerRadius = CornerRadius(yRadius, yRadius)
-          )
-
-          drawText(
-            textLayoutResult = textLayoutResult,
-            color = Color.White,
-            topLeft = Offset(xOffset + padding, yOffset)
-          )
+        // Telegram-style dot badge (when > 0)
+        if (item.badgeCount > 0) {
+          if (item.badgeCount < 100) {
+            NavigationBadgeDot(count = item.badgeCount)
+          } else {
+            NavigationBadgePill(count = item.badgeCount)
+          }
         }
       }
+
+      if (!compact) {
+        Spacer(modifier = Modifier.height(2.dp))
+
+        Text(
+          text = stringResource(item.destination.labelRes),
+          style = MaterialTheme.typography.labelSmall.copy(
+            fontSize = 11.sp,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+          ),
+          color = MaterialTheme.colorScheme.onSurface.copy(alpha = labelAlpha),
+          textAlign = TextAlign.Center,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis
+        )
+      }
+    }
   }
 }
 
 /**
- * Navigation Rail for medium and large form factor devices.
+ * Small red dot with count — Telegram-style badge for < 100.
  */
+@Composable
+private fun BoxScope.NavigationBadgeDot(count: Int) {
+  Box(
+    modifier = Modifier
+      .size(18.dp)
+      .clip(CircleShape)
+      .background(colorResource(R.color.ConversationListTabs__unread)),
+    contentAlignment = Alignment.Center
+  ) {
+    Text(
+      text = if (count > 9) "9+" else count.toString(),
+      style = MaterialTheme.typography.labelSmall.copy(
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color.White
+      ),
+      textAlign = TextAlign.Center
+    )
+  }
+}
+
+/**
+ * Pill-style badge for counts >= 100.
+ */
+@Composable
+private fun BoxScope.NavigationBadgePill(count: Int) {
+  Box(
+    modifier = Modifier
+      .height(16.dp)
+      .width(22.dp)
+      .clip(RoundedCornerShape(8.dp))
+      .background(colorResource(R.color.ConversationListTabs__unread)),
+    contentAlignment = Alignment.Center
+  ) {
+    Text(
+      text = stringResource(R.string.ConversationListTabs__99p),
+      style = MaterialTheme.typography.labelSmall.copy(
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color.White
+      ),
+      textAlign = TextAlign.Center
+    )
+  }
+}
+
+// ============================================================================
+// Legacy Rail (unchanged except using new item rendering)
+// ============================================================================
+
 @Composable
 fun MainNavigationRail(
   state: MainNavigationState,
@@ -303,21 +389,25 @@ private fun BoxScope.NavigationRailCountIndicator(
       modifier = Modifier
         .padding(start = 42.dp)
         .height(16.dp)
-        .defaultMinSize(minWidth = 16.dp)
-        .background(color = colorResource(R.color.ConversationListTabs__unread), shape = RoundedCornerShape(percent = 50))
-        .align(Alignment.TopStart)
+        .width(if (count < 100) 16.dp else 22.dp)
+        .clip(CircleShape)
+        .background(color = colorResource(R.color.ConversationListTabs__unread))
+        .align(Alignment.TopStart),
+      contentAlignment = Alignment.Center
     ) {
       Text(
         text = formatCount(count),
-        style = MaterialTheme.typography.labelMedium,
+        style = MaterialTheme.typography.labelMedium.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
         color = Color.White,
-        modifier = Modifier
-          .align(Alignment.Center)
-          .padding(horizontal = 4.dp)
+        maxLines = 1
       )
     }
   }
 }
+
+// ============================================================================
+// Legacy icon / label composables (preserved for backward compatibility)
+// ============================================================================
 
 @Composable
 private fun NavigationDestinationIcon(
@@ -352,11 +442,52 @@ private fun NavigationDestinationLabel(destination: MainNavigationListLocation) 
 }
 
 @Composable
-private fun formatCount(count: Int): String {
+internal fun formatCount(count: Int): String {
   if (count > 99) {
     return stringResource(R.string.ConversationListTabs__99p)
   }
   return count.toString()
+}
+
+// ============================================================================
+// Previews
+// ============================================================================
+
+@DayNightPreviews
+@Composable
+private fun MainNavigationBarPreview() {
+  Previews.Preview {
+    var selected by remember { mutableStateOf(MainNavigationListLocation.CHATS) }
+
+    MainNavigationBar(
+      state = MainNavigationState(
+        chatsCount = 5,
+        callsCount = 0,
+        storiesCount = 3,
+        currentListLocation = selected,
+        compact = false
+      ),
+      onDestinationSelected = { selected = it }
+    )
+  }
+}
+
+@DayNightPreviews
+@Composable
+private fun MainNavigationBarWithAllDestinationsPreview() {
+  Previews.Preview {
+    MainNavigationBar(
+      state = MainNavigationState(
+        chatsCount = 99,
+        callsCount = 2,
+        storiesCount = 7,
+        currentListLocation = MainNavigationListLocation.CALLS,
+        compact = false
+      ),
+      onDestinationSelected = {},
+      menuConfig = NavigationMenuConfig.fromIds("chats", "calls", "contacts", "stories", "settings")
+    )
+  }
 }
 
 @DayNightPreviews
@@ -374,25 +505,6 @@ private fun MainNavigationRailPreview() {
         currentListLocation = selected
       ),
       mainFloatingActionButtonsCallback = MainFloatingActionButtonsCallback.Empty,
-      onDestinationSelected = { selected = it }
-    )
-  }
-}
-
-@DayNightPreviews
-@Composable
-private fun MainNavigationBarPreview() {
-  Previews.Preview {
-    var selected by remember { mutableStateOf(MainNavigationListLocation.CHATS) }
-
-    MainNavigationBar(
-      state = MainNavigationState(
-        chatsCount = 500,
-        callsCount = 10,
-        storiesCount = 5,
-        currentListLocation = selected,
-        compact = false
-      ),
       onDestinationSelected = { selected = it }
     )
   }
