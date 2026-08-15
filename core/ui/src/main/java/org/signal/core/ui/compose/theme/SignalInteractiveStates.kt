@@ -475,21 +475,21 @@ internal fun signalInteractiveStates(scheme: SignalColorScheme = createLightColo
     ),
     tabSelected = TabState(
       background = Color.Transparent,
-      foreground = brand.primary,
+      text = brand.primary,
       icon = brand.primary,
       indicator = brand.primary,
       ripple = interactive.ripple
     ),
     tabUnselected = TabState(
       background = Color.Transparent,
-      foreground = text.secondary,
+      text = text.secondary,
       icon = text.secondary,
       indicator = Color.Transparent,
       ripple = interactive.ripple
     ),
     tabDisabled = TabState(
       background = Color.Transparent,
-      foreground = text.primaryDisabled,
+      text = text.primaryDisabled,
       icon = text.primaryDisabled,
       indicator = Color.Transparent,
       ripple = Color.Transparent
