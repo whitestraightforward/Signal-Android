@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -177,7 +178,7 @@ fun MainNavigationBar(
  * A single item in the modern navigation bar.
  */
 @Composable
-private fun ModernNavigationBarItem(
+private fun RowScope.ModernNavigationBarItem(
   item: NavigationMenuItemData,
   compact: Boolean,
   onSelected: () -> Unit
