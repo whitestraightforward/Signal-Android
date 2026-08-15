@@ -370,7 +370,7 @@
             android:windowSoftInputMode="stateUnchanged">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="org.thoughtcrime.securesms.MainActivity" />
+                android:value="dev.chat.fork.messenger.MainActivity" />
         </activity>
 
         <activity
@@ -561,7 +561,7 @@
 
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="org.thoughtcrime.securesms.MainActivity" />
+                android:value="dev.chat.fork.messenger.MainActivity" />
         </activity>
 
         <activity
@@ -720,7 +720,7 @@
         </activity>
 
         <activity
-            android:name="org.thoughtcrime.securesms.webrtc.VoiceCallShare"
+            android:name="dev.chat.fork.messenger.webrtc.VoiceCallShare"
             android:configChanges="touchscreen|keyboard|keyboardHidden|orientation|screenLayout|screenSize"
             android:excludeFromRecents="true"
             android:exported="true"
@@ -1412,7 +1412,7 @@
             android:exported="false" />
 
         <service
-            android:name="org.thoughtcrime.securesms.service.webrtc.ActiveCallManager$ActiveCallForegroundService"
+            android:name="dev.chat.fork.messenger.service.webrtc.ActiveCallManager$ActiveCallForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync|microphone|camera|phoneCall|mediaProjection" />
 
@@ -1428,7 +1428,7 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="org.thoughtcrime.securesms.notifications.CLEAR" />
+                <action android:name="dev.chat.fork.messenger.notifications.CLEAR" />
             </intent-filter>
         </receiver>
 
@@ -1437,7 +1437,7 @@
             android:enabled="true"
             android:exported="false">
             <intent-filter>
-                <action android:name="org.thoughtcrime.securesms.notifications.WEAR_REPLY" />
+                <action android:name="dev.chat.fork.messenger.notifications.WEAR_REPLY" />
             </intent-filter>
         </receiver>
 
@@ -1482,7 +1482,7 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="org.thoughtcrime.securesms.RESTART" />
+                <action android:name="dev.chat.fork.messenger.RESTART" />
             </intent-filter>
         </receiver>
 
@@ -1515,7 +1515,7 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="org.thoughtcrime.securesms.action.PROCESS_MESSAGES" />
+                <action android:name="dev.chat.fork.messenger.action.PROCESS_MESSAGES" />
             </intent-filter>
         </receiver>
 
@@ -1569,7 +1569,7 @@
             android:name=".notifications.DeleteNotificationReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="org.thoughtcrime.securesms.DELETE_NOTIFICATION" />
+                <action android:name="dev.chat.fork.messenger.DELETE_NOTIFICATION" />
             </intent-filter>
         </receiver>
 
@@ -1591,13 +1591,13 @@
         </receiver>
 
         <receiver
-            android:name="org.thoughtcrime.securesms.service.webrtc.ActiveCallManager$ActiveCallServiceReceiver"
+            android:name="dev.chat.fork.messenger.service.webrtc.ActiveCallManager$ActiveCallServiceReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="org.thoughtcrime.securesms.service.webrtc.ActiveCallAction.DENY" />
+                <action android:name="dev.chat.fork.messenger.service.webrtc.ActiveCallAction.DENY" />
             </intent-filter>
             <intent-filter>
-                <action android:name="org.thoughtcrime.securesms.service.webrtc.ActiveCallAction.HANGUP" />
+                <action android:name="dev.chat.fork.messenger.service.webrtc.ActiveCallAction.HANGUP" />
             </intent-filter>
         </receiver>
 

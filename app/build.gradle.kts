@@ -157,7 +157,7 @@ screenshotTests {
 }
 
 android {
-  namespace = "org.thoughtcrime.securesms"
+  namespace = "dev.chat.fork.messenger"
 
   experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
@@ -354,9 +354,9 @@ android {
     }
 
     testInstrumentationRunner = if (project.hasProperty("imoTests")) {
-      "org.thoughtcrime.securesms.testing.incomingmessageobserver.IncomingMessageObserverTestRunner"
+      "dev.chat.fork.messenger.testing.incomingmessageobserver.IncomingMessageObserverTestRunner"
     } else {
-      "org.thoughtcrime.securesms.testing.SignalTestRunner"
+      "dev.chat.fork.messenger.testing.SignalTestRunner"
     }
     testInstrumentationRunnerArguments["clearPackageData"] = "true"
   }
@@ -439,7 +439,7 @@ android {
       buildConfigField("boolean", "TRACING_ENABLED", "true")
       buildConfigField("String[]", "UNIDENTIFIED_SENDER_TRUST_ROOTS", "new String[]{ \"BVT/2gHqbrG1xzuIypLIOjFgMtihrMld1/5TGADL6Dhv\"}")
 
-      manifestPlaceholders["applicationClass"] = "org.thoughtcrime.securesms.BenchmarkApplicationContext"
+      manifestPlaceholders["applicationClass"] = "dev.chat.fork.messenger.BenchmarkApplicationContext"
     }
 
     create("mocked") {
@@ -452,7 +452,7 @@ android {
       buildConfigField("String", "BUILD_VARIANT_TYPE", "\"Benchmark\"")
       buildConfigField("boolean", "TRACING_ENABLED", "true")
 
-      manifestPlaceholders["applicationClass"] = "org.thoughtcrime.securesms.ApplicationContext"
+      manifestPlaceholders["applicationClass"] = "dev.chat.fork.messenger.ApplicationContext"
     }
 
     create("canary") {

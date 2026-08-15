@@ -17,7 +17,7 @@ import org.signal.core.models.parcelers.NullableCharSequenceParceler
 import org.signal.core.util.ContentTypeUtil
 import org.signal.mediasend.screens.edit.image.BrushWidths
 import org.signal.mediasend.screens.edit.video.VideoTrimData
-import org.thoughtcrime.securesms.video.TranscodingConfig
+import dev.chat.fork.messenger.video.TranscodingConfig
 import kotlin.time.Duration
 
 /**
