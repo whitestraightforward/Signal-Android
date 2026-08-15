@@ -6952,6 +6952,7 @@
     <!-- Label for Stories tab in home app screen -->
     <string name="ConversationListTabs__stories">Stories</string>
     <string name="ConversationListTabs__settings">Settings</string>
+    <string name="ConversationListTabs__profile">Profile</string>
     <!-- String for counts above 99 in conversation list tabs -->
     <string name="ConversationListTabs__99p">99+</string>
     <!-- Menu item on stories landing page -->

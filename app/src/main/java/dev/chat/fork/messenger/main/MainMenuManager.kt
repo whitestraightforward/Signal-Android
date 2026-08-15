@@ -56,13 +56,19 @@ enum class MainNavigationDestination(
     labelRes = R.string.ConversationListTabs__settings,
     iconRes = R.drawable.ic_settings_24,
     isNewDestination = true
+  ),
+  PROFILE(
+    id = "profile",
+    labelRes = R.string.ConversationListTabs__profile,
+    iconRes = R.drawable.symbol_person_fill_24,
+    isNewDestination = true
   );
 
   /** Maps this destination back to [MainNavigationListLocation] if available. */
   fun toListLocationOrNull(): MainNavigationListLocation? = existingListLocation
 
   companion object {
-    private var visibleOrder: List<String> = listOf("chats", "calls", "stories", "settings")
+    private var visibleOrder: List<String> = listOf("chats", "calls", "stories", "settings", "profile")
 
     /** Returns the currently visible and ordered destinations. */
     fun getVisible(): List<MainNavigationDestination> {
@@ -76,7 +82,7 @@ enum class MainNavigationDestination(
 
     /** Resets to the default visible destinations. */
     fun resetToDefault() {
-      visibleOrder = listOf("chats", "calls", "stories", "settings")
+      visibleOrder = listOf("chats", "calls", "stories", "settings", "profile")
     }
   }
 }

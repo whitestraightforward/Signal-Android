@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -115,21 +116,22 @@ data class MainNavigationState(
 )
 
 // ============================================================================
-// Telegram-inspired Modern Bottom Navigation Bar
+// Professional Floating Bottom Navigation Bar
 // ============================================================================
 
 /**
- * Modern bottom navigation bar inspired by Telegram's navigation design.
+ * Professional floating bottom navigation bar with a modern card-like appearance.
  *
- * Features:
- * - Clean icon + label layout with subtle active indicator
- * - Smooth color transitions between selected/unselected states
- * - Dot-style badge indicators (like Telegram) instead of pill badges
- * - Flexible menu configuration via [NavigationMenuConfig]
- * - Support for new destinations (CONTACTS, SETTINGS) via callbacks
- * - Full backward compatibility with [MainNavigationListLocation]
+ * Design features:
+ * - Floating container with rounded corners and subtle elevation
+ * - Active tab highlighted with a pill-shaped indicator background
+ * - Smooth color and shape transition animations between tabs
+ * - Consistent icon + label layout across all destinations
+ * - Full support for light mode, dark mode, and custom themes
+ * - Badge indicators for unread counts
+ * - Five-tab layout: Chats, Calls, Stories, Settings, Profile
  *
- * When a user taps a new destination (CONTACTS, SETTINGS), the [onNewDestinationSelected]
+ * When a user taps a new destination (SETTINGS, PROFILE), the [onNewDestinationSelected]
  * callback is invoked instead of [onDestinationSelected].
  */
 @Composable
@@ -148,57 +150,88 @@ fun MainNavigationBar(
     config = menuConfig
   )
 
-  NavigationBar(
-    containerColor = SignalTheme.colors.colorSurface2,
-    contentColor = MaterialTheme.colorScheme.onSurface,
-    tonalElevation = Dimensions.elevationNone,
-    modifier = Modifier.height(
-      if (state.compact) Dimensions.navigationBarHeightCompact else Dimensions.navigationBarHeight
-    ),
-    windowInsets = WindowInsets(0, 0, 0, 0)
+  val containerColor = SignalTheme.colors.colorSurface2
+
+  Surface(
+    shape = RoundedCornerShape(28.dp),
+    color = containerColor,
+    shadowElevation = 8.dp,
+    tonalElevation = 3.dp,
+    modifier = Modifier
+      .fillMaxWidth()
+      .padding(horizontal = 12.dp, vertical = 6.dp)
   ) {
-    navItems.forEach { item ->
-      ModernNavigationBarItem(
-        item = item,
-        compact = state.compact,
-        onSelected = {
-          val listLocation = item.destination.toListLocationOrNull()
-          if (listLocation != null) {
-            onDestinationSelected(listLocation)
-          } else {
-            onNewDestinationSelected(item.destination)
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .height(if (state.compact) 60.dp else 68.dp)
+        .padding(horizontal = 4.dp),
+      horizontalArrangement = Arrangement.SpaceEvenly,
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      navItems.forEach { item ->
+        FloatingNavigationBarItem(
+          item = item,
+          compact = state.compact,
+          onSelected = {
+            val listLocation = item.destination.toListLocationOrNull()
+            if (listLocation != null) {
+              onDestinationSelected(listLocation)
+            } else {
+              onNewDestinationSelected(item.destination)
+            }
           }
-        }
-      )
+        )
+      }
     }
   }
 }
 
 /**
- * A single item in the modern navigation bar.
+ * A single item in the floating navigation bar with pill-shaped active indicator.
  */
 @Composable
-private fun RowScope.ModernNavigationBarItem(
+private fun RowScope.FloatingNavigationBarItem(
   item: NavigationMenuItemData,
   compact: Boolean,
   onSelected: () -> Unit
 ) {
   val isSelected = item.isSelected
+
+  val indicatorAlpha by animateFloatAsState(
+    targetValue = if (isSelected) 0.12f else 0f,
+    animationSpec = spring(dampingRatio = 0.75f, stiffness = 400f),
+    label = "navIndicatorAlpha"
+  )
+
   val iconTint by animateColorAsState(
-    targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+    targetValue = if (isSelected) {
+      MaterialTheme.colorScheme.primary
+    } else {
+      MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+    },
     animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
     label = "navIconTint"
   )
-  val labelAlpha by animateFloatAsState(
-    targetValue = if (isSelected) 1f else 0.6f,
+
+  val labelColor by animateColorAsState(
+    targetValue = if (isSelected) {
+      MaterialTheme.colorScheme.primary
+    } else {
+      MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+    },
     animationSpec = spring(dampingRatio = 0.8f, stiffness = 300f),
-    label = "navLabelAlpha"
+    label = "navLabelColor"
   )
+
+  val indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = indicatorAlpha)
 
   Box(
     modifier = Modifier
-      .height(if (compact) 56.dp else 80.dp)
       .weight(1f)
+      .height(if (compact) 48.dp else 56.dp)
+      .clip(RoundedCornerShape(20.dp))
+      .background(indicatorColor)
       .clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
@@ -210,16 +243,14 @@ private fun RowScope.ModernNavigationBarItem(
       horizontalAlignment = Alignment.CenterHorizontally,
       verticalArrangement = Arrangement.Center
     ) {
-      // Icon with dot badge
       Box(contentAlignment = Alignment.TopEnd) {
         Icon(
           painter = painterResource(id = item.destination.iconRes),
           contentDescription = stringResource(item.destination.labelRes),
           tint = iconTint,
-          modifier = Modifier.size(24.dp)
+          modifier = Modifier.size(if (compact) 22.dp else 24.dp)
         )
 
-        // Telegram-style dot badge (when > 0)
         if (item.badgeCount > 0) {
           if (item.badgeCount < 100) {
             NavigationBadgeDot(count = item.badgeCount)
@@ -236,9 +267,9 @@ private fun RowScope.ModernNavigationBarItem(
           text = stringResource(item.destination.labelRes),
           style = MaterialTheme.typography.labelSmall.copy(
             fontSize = 11.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
           ),
-          color = MaterialTheme.colorScheme.onSurface.copy(alpha = labelAlpha),
+          color = labelColor,
           textAlign = TextAlign.Center,
           maxLines = 1,
           overflow = TextOverflow.Ellipsis
@@ -485,7 +516,7 @@ private fun MainNavigationBarWithAllDestinationsPreview() {
         compact = false
       ),
       onDestinationSelected = {},
-      menuConfig = NavigationMenuConfig.fromIds("chats", "calls", "contacts", "stories", "settings")
+      menuConfig = NavigationMenuConfig.fromIds("chats", "calls", "stories", "settings", "profile")
     )
   }
 }

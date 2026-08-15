@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.displayCutoutPadding
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.only
@@ -59,6 +60,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -172,6 +174,7 @@ import dev.chat.fork.messenger.net.DeviceTransferBlockingInterceptor
 import dev.chat.fork.messenger.notifications.VitalsViewModel
 import dev.chat.fork.messenger.notifications.profiles.NotificationProfile
 import dev.chat.fork.messenger.notifications.profiles.NotificationProfiles
+import dev.chat.fork.messenger.profiles.manage.EditProfileActivity
 import dev.chat.fork.messenger.profiles.manage.UsernameEditFragment
 import dev.chat.fork.messenger.service.BackupMediaRestoreService
 import dev.chat.fork.messenger.service.KeyCachingService
@@ -570,8 +573,8 @@ class MainActivity :
             if (isNavigationBarVisible) {
               Column(
                 modifier = Modifier
-                  .clip(contentLayoutData.navigationBarShape)
-                  .background(color = SignalTheme.colors.colorSurface2)
+                  .fillMaxWidth()
+                  .background(color = Color.Transparent)
               ) {
                 MainNavigationBar(
                   state = mainNavigationState,
@@ -580,6 +583,9 @@ class MainActivity :
                     when (destination) {
                       MainNavigationDestination.SETTINGS -> {
                         openSettings.launch(AppSettingsActivity.home(this@MainActivity))
+                      }
+                      MainNavigationDestination.PROFILE -> {
+                        startActivity(EditProfileActivity.getIntent(this@MainActivity))
                       }
                       else -> Unit
                     }
