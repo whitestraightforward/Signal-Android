@@ -581,7 +581,7 @@ class MainActivity :
                 MainNavigationBar(
                   state = mainNavigationState,
                   onDestinationSelected = mainNavigationCallback,
-                  selfRecipient = toolbarState.self
+                  selfRecipient = mainToolbarState.self
                 )
 
                 if (!LocalResources.current.rememberIsSplitPane()) {
