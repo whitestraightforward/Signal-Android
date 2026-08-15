@@ -633,18 +633,6 @@ private fun CallDropdownItems(callFilter: CallLogFilter, callback: MainToolbarCa
   DropdownMenus.Item(
     text = {
       Text(
-        text = stringResource(R.string.text_secure_normal__menu_settings)
-      )
-    },
-    onClick = {
-      callback.onSettingsClick()
-      onOptionSelected()
-    }
-  )
-
-  DropdownMenus.Item(
-    text = {
-      Text(
         text = stringResource(R.string.ConversationListFragment__notification_profile)
       )
     },
@@ -746,18 +734,6 @@ private fun ChatDropdownItems(state: MainToolbarState, callback: MainToolbarCall
       }
     )
   }
-
-  DropdownMenus.Item(
-    text = {
-      Text(
-        text = stringResource(R.string.text_secure_normal__menu_settings)
-      )
-    },
-    onClick = {
-      callback.onSettingsClick()
-      onOptionSelected()
-    }
-  )
 
   DropdownMenus.Item(
     text = {

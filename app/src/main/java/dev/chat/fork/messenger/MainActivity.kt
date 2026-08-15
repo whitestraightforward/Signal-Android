@@ -149,6 +149,7 @@ import dev.chat.fork.messenger.main.MainBottomChromeCallback
 import dev.chat.fork.messenger.main.MainBottomChromeState
 import dev.chat.fork.messenger.main.MainContentLayoutData
 import dev.chat.fork.messenger.main.MainMegaphoneState
+import dev.chat.fork.messenger.main.MainNavigationDestination
 import dev.chat.fork.messenger.main.MainNavigationBar
 import dev.chat.fork.messenger.main.MainNavigationDetailLocation
 import dev.chat.fork.messenger.main.MainNavigationListLocation
@@ -574,7 +575,15 @@ class MainActivity :
               ) {
                 MainNavigationBar(
                   state = mainNavigationState,
-                  onDestinationSelected = mainNavigationCallback
+                  onDestinationSelected = mainNavigationCallback,
+                  onNewDestinationSelected = { destination ->
+                    when (destination) {
+                      MainNavigationDestination.SETTINGS -> {
+                        openSettings.launch(AppSettingsActivity.home(this@MainActivity))
+                      }
+                      else -> Unit
+                    }
+                  }
                 )
 
                 if (!LocalResources.current.rememberIsSplitPane()) {
