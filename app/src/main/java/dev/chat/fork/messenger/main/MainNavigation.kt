@@ -217,9 +217,10 @@ fun MainNavigationBar(
 }
 
 /**
- * Observes unhandled horizontal swipes from the main window. Pointer changes are read during the
- * final event pass and are never consumed, allowing child controls, scrolling, message gestures,
- * and system navigation to keep priority.
+ * Handles horizontal navigation swipes at the shared window layer. Events are observed before child
+ * content so the gesture remains available over Compose and embedded Fragment interfaces alike.
+ * Taps and vertical movement are left untouched; pointer input is consumed only after a deliberate
+ * horizontal swipe crosses the configured distance.
  */
 fun Modifier.mainWindowNavigationSwipe(
   layoutDirection: LayoutDirection,
@@ -233,34 +234,46 @@ fun Modifier.mainWindowNavigationSwipe(
   return pointerInput(config, layoutDirection) {
     awaitPointerEventScope {
       while (true) {
-        val downEvent = awaitPointerEvent(PointerEventPass.Final)
+        val downEvent = awaitPointerEvent(PointerEventPass.Initial)
         val down = downEvent.changes.firstOrNull { change -> change.pressed && !change.previousPressed } ?: continue
         val pointerId = down.id
         val startPosition = down.position
         var endPosition = startPosition
-        var handledByChild = down.isConsumed
+        var isNavigationSwipe = false
+        var isRejectedGesture = false
         var pointerIsDown = true
 
         while (pointerIsDown) {
-          val event = awaitPointerEvent(PointerEventPass.Final)
+          val event = awaitPointerEvent(PointerEventPass.Initial)
           if (event.changes.count { change -> change.pressed } > 1) {
-            handledByChild = true
+            isRejectedGesture = true
           }
 
           val change = event.changes.firstOrNull { it.id == pointerId }
           if (change == null) {
-            handledByChild = true
+            isRejectedGesture = true
             pointerIsDown = false
           } else {
-            handledByChild = handledByChild || change.isConsumed
             endPosition = change.position
+            val drag = endPosition - startPosition
+
+            if (!isNavigationSwipe && !isRejectedGesture) {
+              if (abs(drag.y) > viewConfiguration.touchSlop && abs(drag.y) >= abs(drag.x)) {
+                isRejectedGesture = true
+              } else if (abs(drag.x) >= config.minimumSwipeDistance.toPx() && abs(drag.x) > abs(drag.y)) {
+                isNavigationSwipe = true
+              }
+            }
+
+            if (isNavigationSwipe) {
+              change.consume()
+            }
             pointerIsDown = change.pressed
           }
         }
 
-        val drag = endPosition - startPosition
-        if (!handledByChild && abs(drag.x) >= config.minimumSwipeDistance.toPx() && abs(drag.x) > abs(drag.y)) {
-          val moveTowardRight = drag.x < 0f
+        if (isNavigationSwipe && !isRejectedGesture) {
+          val moveTowardRight = endPosition.x < startPosition.x
           onMove(
             when {
               moveTowardRight && layoutDirection == LayoutDirection.Ltr -> NavigationBarMoveDirection.NEXT
