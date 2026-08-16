@@ -27,6 +27,7 @@ import org.signal.core.ui.logging.LoggingFragment
 import org.signal.core.util.concurrent.LifecycleDisposable
 import org.signal.core.util.getParcelableCompat
 import dev.chat.fork.messenger.AvatarPreviewActivity
+import dev.chat.fork.messenger.MainActivity
 import dev.chat.fork.messenger.R
 import dev.chat.fork.messenger.avatar.Avatars.getForegroundColor
 import dev.chat.fork.messenger.avatar.Avatars.getTextSizeForLength
@@ -87,6 +88,9 @@ class EditProfileFragment : LoggingFragment() {
     }
 
     initializeViewModel()
+
+    binding.toolbar.isVisible = requireActivity() !is MainActivity
+    binding.toolbar.setNavigationOnClickListener { requireActivity().finish() }
 
     binding.manageProfileEditPhoto.setOnClickListener {
       if (!viewModel.isRegisteredAndUpToDate) {
