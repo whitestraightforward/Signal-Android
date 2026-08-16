@@ -23,7 +23,7 @@ MainBottomChrome               Settings / Lists / Media
 
 | File | Responsibility |
 | --- | --- |
-| `MainNavigationGestureResolver.kt` | Pure, framework-free arbitration and physics. Fully unit tested. |
+| `MainNavigationGestureResolver.kt` | Pure, framework-free arbitration and physics. |
 | `MainNavigationGestureLayer.kt` | Compose recognition layer, `MainNavigationGestureState`, spring animation. |
 | `MainNavigation.kt` | Gesture container, navigation layout, detects navigation interactions. |
 | `MainNavigationViewModel.kt` | Navigation position, current location, animation and interaction state. |
