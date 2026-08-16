@@ -164,6 +164,8 @@ import dev.chat.fork.messenger.main.MainToolbarCallback
 import dev.chat.fork.messenger.main.MainToolbarMode
 import dev.chat.fork.messenger.main.MainToolbarState
 import dev.chat.fork.messenger.main.MainToolbarViewModel
+import dev.chat.fork.messenger.main.EmbeddedSettingsFragment
+import dev.chat.fork.messenger.main.EmbeddedProfileFragment
 import dev.chat.fork.messenger.main.Material3OnScrollHelperBinder
 import dev.chat.fork.messenger.mediasend.MediaSendLauncher
 import dev.chat.fork.messenger.megaphone.Megaphone
