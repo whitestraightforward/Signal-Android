@@ -196,12 +196,24 @@ object MainNavigationGestureResolver {
 
   /**
    * Map a physical swipe direction to a logical destination change, honouring layout direction.
+   *
+   * The mapping is inverted relative to a "drag the strip of tabs" model: a swipe towards the
+   * right advances to the NEXT destination and a swipe towards the left goes back to the
+   * PREVIOUS one.
+   *
+   * This is what makes both directions usable in practice. The default tab (Chats) sits at index
+   * 0, so under the previous mapping a right swipe resolved to PREVIOUS, hit the start-of-list
+   * edge guard and silently did nothing — the gesture appeared dead on the screen users start on.
+   * With this mapping a right swipe from Chats advances normally, and the edge guard only blocks
+   * the genuine ends of the list.
+   *
+   * RTL is still mirrored, so the gesture keeps matching the on-screen order of the tabs.
    */
   @JvmStatic
   fun moveDirectionFor(direction: NavigationSwipeDirection, isRtl: Boolean): NavigationBarMoveDirection {
     return when (direction) {
-      NavigationSwipeDirection.LEFT -> if (isRtl) NavigationBarMoveDirection.PREVIOUS else NavigationBarMoveDirection.NEXT
-      NavigationSwipeDirection.RIGHT -> if (isRtl) NavigationBarMoveDirection.NEXT else NavigationBarMoveDirection.PREVIOUS
+      NavigationSwipeDirection.RIGHT -> if (isRtl) NavigationBarMoveDirection.PREVIOUS else NavigationBarMoveDirection.NEXT
+      NavigationSwipeDirection.LEFT -> if (isRtl) NavigationBarMoveDirection.NEXT else NavigationBarMoveDirection.PREVIOUS
     }
   }
 

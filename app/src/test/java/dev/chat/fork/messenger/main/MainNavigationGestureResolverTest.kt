@@ -8,6 +8,7 @@ package dev.chat.fork.messenger.main
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isNotEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import org.junit.Test
@@ -181,7 +182,7 @@ class MainNavigationGestureResolverTest {
 
     assertThat(decision.position).isEqualTo(NavigationPosition.LEFT)
     assertThat(decision.direction).isEqualTo(NavigationSwipeDirection.LEFT)
-    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.NEXT)
+    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.PREVIOUS)
     assertThat(decision.targetOffsetPx).isEqualTo(-200f)
     assertThat(decision.commits).isTrue()
   }
@@ -196,7 +197,7 @@ class MainNavigationGestureResolverTest {
 
     assertThat(decision.position).isEqualTo(NavigationPosition.RIGHT)
     assertThat(decision.direction).isEqualTo(NavigationSwipeDirection.RIGHT)
-    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.PREVIOUS)
+    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.NEXT)
     assertThat(decision.targetOffsetPx).isEqualTo(200f)
   }
 
@@ -209,7 +210,7 @@ class MainNavigationGestureResolverTest {
     )
 
     assertThat(decision.position).isEqualTo(NavigationPosition.LEFT)
-    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.NEXT)
+    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.PREVIOUS)
   }
 
   @Test
@@ -231,7 +232,7 @@ class MainNavigationGestureResolverTest {
       offsetPx = -180f,
       velocityPxPerSecond = -3_000f,
       metrics = metrics,
-      canMoveNext = false
+      canMovePrevious = false
     )
 
     assertThat(decision.position).isEqualTo(NavigationPosition.CENTER)
@@ -245,22 +246,22 @@ class MainNavigationGestureResolverTest {
 
   @Test
   fun `swipe direction maps to logical movement in ltr`() {
-    assertThat(MainNavigationGestureResolver.moveDirectionFor(NavigationSwipeDirection.LEFT, isRtl = false))
-      .isEqualTo(NavigationBarMoveDirection.NEXT)
     assertThat(MainNavigationGestureResolver.moveDirectionFor(NavigationSwipeDirection.RIGHT, isRtl = false))
+      .isEqualTo(NavigationBarMoveDirection.NEXT)
+    assertThat(MainNavigationGestureResolver.moveDirectionFor(NavigationSwipeDirection.LEFT, isRtl = false))
       .isEqualTo(NavigationBarMoveDirection.PREVIOUS)
   }
 
   @Test
   fun `swipe direction is mirrored in rtl`() {
-    assertThat(MainNavigationGestureResolver.moveDirectionFor(NavigationSwipeDirection.LEFT, isRtl = true))
-      .isEqualTo(NavigationBarMoveDirection.PREVIOUS)
     assertThat(MainNavigationGestureResolver.moveDirectionFor(NavigationSwipeDirection.RIGHT, isRtl = true))
+      .isEqualTo(NavigationBarMoveDirection.PREVIOUS)
+    assertThat(MainNavigationGestureResolver.moveDirectionFor(NavigationSwipeDirection.LEFT, isRtl = true))
       .isEqualTo(NavigationBarMoveDirection.NEXT)
   }
 
   @Test
-  fun `rtl release maps a left throw to the previous destination`() {
+  fun `rtl release maps a left throw to the next destination`() {
     val decision = MainNavigationGestureResolver.resolveRelease(
       offsetPx = -150f,
       velocityPxPerSecond = 0f,
@@ -269,7 +270,94 @@ class MainNavigationGestureResolverTest {
     )
 
     assertThat(decision.position).isEqualTo(NavigationPosition.LEFT)
-    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.PREVIOUS)
+    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.NEXT)
+  }
+
+  // --------------------------------------------------------------------------------------------
+  // Regression: both directions must be usable from the default tab.
+  // --------------------------------------------------------------------------------------------
+
+  @Test
+  fun `a right swipe from the first destination advances instead of being blocked`() {
+    // Chats is index 0, so canMovePrevious is false there. A right swipe must still commit,
+    // otherwise the gesture is dead on the screen the app starts on.
+    val decision = MainNavigationGestureResolver.resolveRelease(
+      offsetPx = 150f,
+      velocityPxPerSecond = 0f,
+      metrics = metrics,
+      canMovePrevious = false,
+      canMoveNext = true
+    )
+
+    assertThat(decision.commits).isTrue()
+    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.NEXT)
+  }
+
+  @Test
+  fun `a right fling from the first destination advances instead of being blocked`() {
+    val decision = MainNavigationGestureResolver.resolveRelease(
+      offsetPx = 15f,
+      velocityPxPerSecond = 3_000f,
+      metrics = metrics,
+      canMovePrevious = false,
+      canMoveNext = true
+    )
+
+    assertThat(decision.commits).isTrue()
+    assertThat(decision.move).isEqualTo(NavigationBarMoveDirection.NEXT)
+  }
+
+  @Test
+  fun `left and right swipes resolve to opposite destinations`() {
+    val left = MainNavigationGestureResolver.resolveRelease(
+      offsetPx = -150f,
+      velocityPxPerSecond = 0f,
+      metrics = metrics
+    )
+    val right = MainNavigationGestureResolver.resolveRelease(
+      offsetPx = 150f,
+      velocityPxPerSecond = 0f,
+      metrics = metrics
+    )
+
+    assertThat(left.commits).isTrue()
+    assertThat(right.commits).isTrue()
+    assertThat(left.move).isNotEqualTo(right.move)
+  }
+
+  @Test
+  fun `both directions commit at identical distance and velocity thresholds`() {
+    val distance = maxOf(metrics.minimumSwipeDistancePx, metrics.slotWidthPx * metrics.commitDistanceFraction)
+
+    // Just under the threshold: neither direction may commit.
+    assertThat(
+      MainNavigationGestureResolver.resolveRelease(distance - 1f, 0f, metrics).commits
+    ).isFalse()
+    assertThat(
+      MainNavigationGestureResolver.resolveRelease(-(distance - 1f), 0f, metrics).commits
+    ).isFalse()
+
+    // At the threshold: both directions must commit.
+    assertThat(MainNavigationGestureResolver.resolveRelease(distance, 0f, metrics).commits).isTrue()
+    assertThat(MainNavigationGestureResolver.resolveRelease(-distance, 0f, metrics).commits).isTrue()
+
+    // Fling velocity behaves symmetrically too.
+    val v = metrics.minimumFlingVelocity
+    assertThat(MainNavigationGestureResolver.resolveRelease(0f, v, metrics).commits).isTrue()
+    assertThat(MainNavigationGestureResolver.resolveRelease(0f, -v, metrics).commits).isTrue()
+  }
+
+  @Test
+  fun `resistance and ownership behave symmetrically in both directions`() {
+    assertThat(MainNavigationGestureResolver.applyResistance(120f, metrics))
+      .isEqualTo(-MainNavigationGestureResolver.applyResistance(-120f, metrics))
+
+    assertThat(
+      MainNavigationGestureResolver.resolveOwner(NavigationGestureRegion.NAVIGATION, 150f, 10f, metrics)
+    ).isEqualTo(NavigationGestureOwner.NAVIGATION)
+    assertThat(
+      MainNavigationGestureResolver.resolveOwner(NavigationGestureRegion.NAVIGATION, -150f, 10f, metrics)
+    ).isEqualTo(NavigationGestureOwner.NAVIGATION)
   }
 
   // --------------------------------------------------------------------------------------------

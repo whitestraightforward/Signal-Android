@@ -71,12 +71,30 @@ On release the layer measures the current position, the swipe distance and the s
 
 * **Small movement** (below both the distance and the velocity threshold) → springs back to
   `CENTER`, no destination change.
-* **Long drag or fast fling left** → locks to `LEFT`, moves to the next destination.
-* **Long drag or fast fling right** → locks to `RIGHT`, moves to the previous destination.
+* **Long drag or fast fling right** → locks to `RIGHT`, moves to the **next** destination.
+* **Long drag or fast fling left** → locks to `LEFT`, moves to the **previous** destination.
 * **At an edge** with nowhere to go → always returns to rest.
 
 Velocity beats a stale offset, so flicking back the other way follows the flick. Layout direction
 is honoured: in RTL the physical directions map to the mirrored logical destinations.
+
+### Direction mapping
+
+With the tab order `chats · calls · stories · settings · profile`:
+
+| Current tab | Swipe right | Swipe left |
+| --- | --- | --- |
+| chats | calls | *(start of list)* |
+| calls | stories | chats |
+| stories | settings | calls |
+| settings | profile | stories |
+| profile | *(end of list)* | settings |
+
+Both directions are symmetric and share identical distance/velocity thresholds. The mapping is
+deliberately **not** the "drag the strip of tabs" model: because the default tab (Chats) is at
+index 0, mapping a right swipe to PREVIOUS made it hit the start-of-list edge guard and silently
+do nothing on the very screen the app opens on. Mapping right → NEXT keeps both directions alive
+everywhere except the genuine ends of the list.
 
 ## 6. Animation
 
