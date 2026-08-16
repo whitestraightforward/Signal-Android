@@ -582,7 +582,8 @@ class MainActivity :
                   state = mainNavigationState,
                   onDestinationSelected = mainNavigationCallback,
                   selfRecipient = mainToolbarState.self,
-                  onSwipe = mainNavigationViewModel::moveNavigationBar
+                  onSwipe = mainNavigationViewModel::moveNavigationBar,
+                  onGestureStateChanged = mainNavigationViewModel::updateNavigationGesture
                 )
 
                 if (!LocalResources.current.rememberIsSplitPane()) {
@@ -596,8 +597,7 @@ class MainActivity :
               MainNavigationRail(
                 state = mainNavigationState,
                 mainFloatingActionButtonsCallback = mainBottomChromeCallback,
-                onDestinationSelected = mainNavigationCallback,
-                onSwipe = mainNavigationViewModel::moveNavigationBar
+                onDestinationSelected = mainNavigationCallback
               )
             }
           },
@@ -683,8 +683,7 @@ class MainActivity :
                   state = mainBottomChromeState,
                   callback = mainBottomChromeCallback,
                   megaphoneActionController = megaphoneActionController,
-                  modifier = Modifier.align(Alignment.BottomCenter),
-                  onNavigationSwipe = mainNavigationViewModel::moveNavigationBar
+                  modifier = Modifier.align(Alignment.BottomCenter)
                 )
               }
             }

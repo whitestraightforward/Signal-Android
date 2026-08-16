@@ -63,9 +63,7 @@ fun MainBottomChrome(
   state: MainBottomChromeState,
   callback: MainBottomChromeCallback,
   megaphoneActionController: MegaphoneActionController,
-  modifier: Modifier = Modifier,
-  onNavigationSwipe: ((NavigationBarMoveDirection) -> Unit)? = null,
-  swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
+  modifier: Modifier = Modifier
 ) {
   val isSplitPane = LocalResources.current.rememberIsSplitPane()
   val navigationType = NavigationType.rememberNavigationType()
@@ -83,9 +81,7 @@ fun MainBottomChrome(
       ) {
         MainFloatingActionButtons(
           destination = state.destination,
-          callback = callback,
-          onNavigationSwipe = onNavigationSwipe,
-          swipeConfig = swipeConfig
+          callback = callback
         )
       }
     }

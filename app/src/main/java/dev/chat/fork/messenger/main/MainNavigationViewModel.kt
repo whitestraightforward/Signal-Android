@@ -457,6 +457,15 @@ class MainNavigationViewModel(
     onTabSelected(MainNavigationListLocation.PROFILE)
   }
 
+  fun updateNavigationGesture(progress: Float, isActive: Boolean) {
+    internalMainNavigationState.update { state ->
+      state.copy(
+        navigationGestureProgress = progress.coerceIn(-1f, 1f),
+        isNavigationGestureActive = isActive
+      )
+    }
+  }
+
   fun moveNavigationBar(direction: NavigationBarMoveDirection) {
     val state = internalMainNavigationState.value
     val visibleDestinations = MainNavigationDestination.getVisible()
@@ -479,7 +488,8 @@ class MainNavigationViewModel(
     }
     val targetIndex = (currentIndex + indexChange).coerceIn(visibleDestinations.indices)
     if (targetIndex != currentIndex) {
-      onTabSelected(visibleDestinations[targetIndex])
+      setFocusedPane(ThreePaneScaffoldRole.Secondary)
+      goTo(visibleDestinations[targetIndex])
     }
   }
 

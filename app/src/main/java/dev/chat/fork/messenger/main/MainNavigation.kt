@@ -8,15 +8,21 @@ package dev.chat.fork.messenger.main
 import androidx.annotation.RawRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -24,6 +30,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,15 +45,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -56,6 +64,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,6 +84,7 @@ import dev.chat.fork.messenger.R
 import dev.chat.fork.messenger.avatar.AvatarImage
 import dev.chat.fork.messenger.recipients.Recipient
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private val LOTTIE_SIZE = 28.dp
 
@@ -127,13 +137,17 @@ data class MainNavigationState(
   val storyFailure: Boolean = false,
   val isStoriesFeatureEnabled: Boolean = true,
   val currentListLocation: MainNavigationListLocation = MainNavigationListLocation.CHATS,
-  val compact: Boolean = false
+  val compact: Boolean = false,
+  val navigationGestureProgress: Float = 0f,
+  val isNavigationGestureActive: Boolean = false
 )
 
-/** Controls main-window swipe navigation without affecting the navigation destinations themselves. */
+/** Controls drag and release behavior for the floating navigation indicator. */
 data class NavigationSwipeConfig(
   val enabled: Boolean = true,
-  val minimumSwipeDistance: Dp = 64.dp
+  val minimumSwipeDistance: Dp = 48.dp,
+  val minimumFlingVelocity: Float = 1_000f,
+  val dragResistance: Float = 0.8f
 )
 
 enum class NavigationBarMoveDirection {
@@ -168,6 +182,7 @@ fun MainNavigationBar(
   menuConfig: NavigationMenuConfig = NavigationMenuConfig.default(),
   selfRecipient: Recipient = Recipient.UNKNOWN,
   onSwipe: ((NavigationBarMoveDirection) -> Unit)? = null,
+  onGestureStateChanged: (progress: Float, isActive: Boolean) -> Unit = { _, _ -> },
   swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
 ) {
   val navItems = NavigationMenuProvider.getItems(
@@ -179,6 +194,10 @@ fun MainNavigationBar(
     config = menuConfig
   )
 
+  if (navItems.isEmpty()) {
+    return
+  }
+
   val onItemSelected: (NavigationMenuItemData) -> Unit = { item ->
     val listLocation = item.destination.toListLocationOrNull()
     if (listLocation != null) {
@@ -189,6 +208,9 @@ fun MainNavigationBar(
   }
 
   val containerColor = SignalTheme.colors.colorSurface2
+  var rawDragOffset by remember { mutableFloatStateOf(0f) }
+  var indicatorDragOffset by remember { mutableFloatStateOf(0f) }
+  val layoutDirection = LocalLayoutDirection.current
 
   Surface(
     shape = RoundedCornerShape(28.dp),
@@ -198,107 +220,124 @@ fun MainNavigationBar(
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = 12.dp, vertical = 6.dp)
-      .mainNavigationSwipe(
-        config = swipeConfig,
-        onMove = onSwipe
-      )
   ) {
-    Row(
+    BoxWithConstraints(
       modifier = Modifier
         .fillMaxWidth()
         .height(if (state.compact) 60.dp else 68.dp)
-        .padding(horizontal = 4.dp),
-      horizontalArrangement = Arrangement.SpaceEvenly,
-      verticalAlignment = Alignment.CenterVertically
+        .padding(horizontal = 4.dp)
     ) {
-      navItems.forEach { item ->
-        FloatingNavigationBarItem(
-          item = item,
-          compact = state.compact,
-          selfRecipient = selfRecipient,
-          onSelected = { onItemSelected(item) }
-        )
+      val itemWidth = maxWidth / navItems.size
+      val itemWidthPx = constraints.maxWidth.toFloat() / navItems.size
+      val selectedDestination = if (state.currentListLocation == MainNavigationListLocation.ARCHIVE) {
+        MainNavigationListLocation.CHATS
+      } else {
+        state.currentListLocation
       }
-    }
-  }
-}
+      val selectedIndex = navItems.indexOfFirst { item ->
+        item.destination.toListLocationOrNull() == selectedDestination
+      }.coerceAtLeast(0)
+      val physicalIndex = if (layoutDirection == LayoutDirection.Ltr) {
+        selectedIndex
+      } else {
+        navItems.lastIndex - selectedIndex
+      }
+      val indicatorBaseOffset by animateFloatAsState(
+        targetValue = physicalIndex * itemWidthPx,
+        animationSpec = if (state.isNavigationGestureActive) {
+          snap()
+        } else {
+          spring(dampingRatio = 0.78f, stiffness = 500f)
+        },
+        label = "navigationIndicatorOffset"
+      )
+      val minimumSwipeDistancePx = with(LocalDensity.current) {
+        swipeConfig.minimumSwipeDistance.toPx()
+      }
+      val draggableState = rememberDraggableState { delta ->
+        rawDragOffset += delta
+        indicatorDragOffset = (rawDragOffset * swipeConfig.dragResistance.coerceIn(0f, 1f))
+          .coerceIn(-itemWidthPx, itemWidthPx)
+        onGestureStateChanged(indicatorDragOffset / itemWidthPx, true)
+      }
 
-/**
- * Handles horizontal swipes only within components that belong to the shared navigation chrome.
- * Application content keeps full ownership of scrolling, message actions, text input, and other
- * pointer interactions. Taps and vertical movement inside navigation components are left untouched.
- */
-@Composable
-internal fun Modifier.mainNavigationSwipe(
-  config: NavigationSwipeConfig = NavigationSwipeConfig(),
-  onMove: ((NavigationBarMoveDirection) -> Unit)?
-): Modifier {
-  if (!config.enabled || onMove == null) {
-    return this
-  }
-
-  return navigationSwipePointerInput(
-    layoutDirection = LocalLayoutDirection.current,
-    config = config,
-    onMove = onMove
-  )
-}
-
-private fun Modifier.navigationSwipePointerInput(
-  layoutDirection: LayoutDirection,
-  config: NavigationSwipeConfig,
-  onMove: (NavigationBarMoveDirection) -> Unit
-): Modifier {
-  return pointerInput(config, layoutDirection) {
-    awaitPointerEventScope {
-      while (true) {
-        val downEvent = awaitPointerEvent(PointerEventPass.Initial)
-        val down = downEvent.changes.firstOrNull { change -> change.pressed && !change.previousPressed } ?: continue
-        val pointerId = down.id
-        val startPosition = down.position
-        var endPosition = startPosition
-        var isNavigationSwipe = false
-        var isRejectedGesture = false
-        var pointerIsDown = true
-
-        while (pointerIsDown) {
-          val event = awaitPointerEvent(PointerEventPass.Initial)
-          if (event.changes.count { change -> change.pressed } > 1) {
-            isRejectedGesture = true
+      Box(
+        modifier = Modifier
+          .offset {
+            IntOffset(
+              x = (indicatorBaseOffset + indicatorDragOffset).roundToInt(),
+              y = 0
+            )
           }
+          .width(itemWidth)
+          .height(if (state.compact) 48.dp else 56.dp)
+          .align(Alignment.CenterStart)
+          .clip(RoundedCornerShape(20.dp))
+          .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+      )
 
-          val change = event.changes.firstOrNull { it.id == pointerId }
-          if (change == null) {
-            isRejectedGesture = true
-            pointerIsDown = false
-          } else {
-            endPosition = change.position
-            val drag = endPosition - startPosition
-
-            if (!isNavigationSwipe && !isRejectedGesture) {
-              if (abs(drag.y) > viewConfiguration.touchSlop && abs(drag.y) >= abs(drag.x)) {
-                isRejectedGesture = true
-              } else if (abs(drag.x) >= config.minimumSwipeDistance.toPx() && abs(drag.x) > abs(drag.y)) {
-                isNavigationSwipe = true
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(if (state.compact) 60.dp else 68.dp)
+          .draggable(
+            state = draggableState,
+            orientation = Orientation.Horizontal,
+            enabled = swipeConfig.enabled && onSwipe != null,
+            onDragStarted = { _ ->
+              rawDragOffset = 0f
+              indicatorDragOffset = 0f
+              onGestureStateChanged(0f, true)
+            },
+            onDragStopped = { velocity ->
+              val movement = if (abs(velocity) >= swipeConfig.minimumFlingVelocity) {
+                velocity
+              } else {
+                indicatorDragOffset
               }
-            }
+              val moveDirection = when {
+                movement < 0f && layoutDirection == LayoutDirection.Ltr -> NavigationBarMoveDirection.PREVIOUS
+                movement < 0f -> NavigationBarMoveDirection.NEXT
+                layoutDirection == LayoutDirection.Ltr -> NavigationBarMoveDirection.NEXT
+                else -> NavigationBarMoveDirection.PREVIOUS
+              }
+              val canMove = when (moveDirection) {
+                NavigationBarMoveDirection.PREVIOUS -> selectedIndex > 0
+                NavigationBarMoveDirection.NEXT -> selectedIndex < navItems.lastIndex
+              }
+              val shouldMove = canMove && (
+                abs(indicatorDragOffset) >= minimumSwipeDistancePx ||
+                  abs(velocity) >= swipeConfig.minimumFlingVelocity
+                )
+              if (shouldMove) {
+                val targetShift = if (movement < 0f) -itemWidthPx else itemWidthPx
+                indicatorDragOffset -= targetShift
+                onSwipe?.invoke(moveDirection)
+                withFrameNanos { }
+              }
 
-            if (isNavigationSwipe) {
-              change.consume()
-            }
-            pointerIsDown = change.pressed
-          }
-        }
+              animate(
+                initialValue = indicatorDragOffset,
+                targetValue = 0f,
+                animationSpec = spring(dampingRatio = 0.78f, stiffness = 500f)
+              ) { value, _ ->
+                indicatorDragOffset = value
+                onGestureStateChanged(value / itemWidthPx, true)
+              }
 
-        if (isNavigationSwipe && !isRejectedGesture) {
-          val moveTowardRight = endPosition.x < startPosition.x
-          onMove(
-            when {
-              moveTowardRight && layoutDirection == LayoutDirection.Ltr -> NavigationBarMoveDirection.NEXT
-              moveTowardRight -> NavigationBarMoveDirection.PREVIOUS
-              layoutDirection == LayoutDirection.Ltr -> NavigationBarMoveDirection.PREVIOUS
-              else -> NavigationBarMoveDirection.NEXT
+              rawDragOffset = 0f
+              onGestureStateChanged(0f, false)
             }
+          ),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        navItems.forEach { item ->
+          FloatingNavigationBarItem(
+            item = item,
+            compact = state.compact,
+            selfRecipient = selfRecipient,
+            onSelected = { onItemSelected(item) }
           )
         }
       }
@@ -317,12 +356,6 @@ private fun RowScope.FloatingNavigationBarItem(
   onSelected: () -> Unit
 ) {
   val isSelected = item.isSelected
-
-  val indicatorAlpha by animateFloatAsState(
-    targetValue = if (isSelected) 0.12f else 0f,
-    animationSpec = spring(dampingRatio = 0.75f, stiffness = 400f),
-    label = "navIndicatorAlpha"
-  )
 
   val iconTint by animateColorAsState(
     targetValue = if (isSelected) {
@@ -344,14 +377,11 @@ private fun RowScope.FloatingNavigationBarItem(
     label = "navLabelColor"
   )
 
-  val indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = indicatorAlpha)
-
   Box(
     modifier = Modifier
       .weight(1f)
       .height(if (compact) 48.dp else 56.dp)
       .clip(RoundedCornerShape(20.dp))
-      .background(indicatorColor)
       .clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
@@ -466,16 +496,10 @@ private fun BoxScope.NavigationBadgePill(count: Int) {
 fun MainNavigationRail(
   state: MainNavigationState,
   mainFloatingActionButtonsCallback: MainFloatingActionButtonsCallback,
-  onDestinationSelected: (MainNavigationListLocation) -> Unit,
-  onSwipe: ((NavigationBarMoveDirection) -> Unit)? = null,
-  swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
+  onDestinationSelected: (MainNavigationListLocation) -> Unit
 ) {
   NavigationRail(
-    containerColor = SignalTheme.colors.colorSurface1,
-    modifier = Modifier.mainNavigationSwipe(
-      config = swipeConfig,
-      onMove = onSwipe
-    )
+    containerColor = SignalTheme.colors.colorSurface1
   ) {
     Spacer(modifier = Modifier.height(40.dp).weight(1f, fill = false))
 
