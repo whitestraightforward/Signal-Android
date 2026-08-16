@@ -88,8 +88,6 @@ class EditProfileFragment : LoggingFragment() {
 
     initializeViewModel()
 
-    binding.toolbar.setNavigationOnClickListener { requireActivity().finish() }
-
     binding.manageProfileEditPhoto.setOnClickListener {
       if (!viewModel.isRegisteredAndUpToDate) {
         onClickWhenUnregisteredOrDeprecated()
