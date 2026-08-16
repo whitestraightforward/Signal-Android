@@ -167,6 +167,8 @@ import dev.chat.fork.messenger.main.MainToolbarViewModel
 import dev.chat.fork.messenger.main.EmbeddedSettingsFragment
 import dev.chat.fork.messenger.main.EmbeddedProfileFragment
 import dev.chat.fork.messenger.main.Material3OnScrollHelperBinder
+import dev.chat.fork.messenger.main.navigationContentGestureRegion
+import dev.chat.fork.messenger.main.rememberMainNavigationGestureState
 import dev.chat.fork.messenger.mediasend.MediaSendLauncher
 import dev.chat.fork.messenger.megaphone.Megaphone
 import dev.chat.fork.messenger.megaphone.MegaphoneActionController
@@ -389,6 +391,11 @@ class MainActivity :
       val megaphone by mainNavigationViewModel.megaphone.collectAsStateWithLifecycle()
       val mainNavigationState by mainNavigationViewModel.mainNavigationState.collectAsStateWithLifecycle()
 
+      // Single, shared gesture-management layer for the whole navigation chrome. It is owned here
+      // (not by a global swipe listener) so that navigation, bottom chrome and content can all
+      // consult the same arbitration state without any of them capturing the entire screen.
+      val navigationGestureState = rememberMainNavigationGestureState()
+
       LaunchedEffect(mainNavigationState.currentListLocation) {
         when (mainNavigationState.currentListLocation) {
           MainNavigationListLocation.CHATS -> toolbarViewModel.presentToolbarForConversationListFragment()
@@ -583,7 +590,8 @@ class MainActivity :
                   onDestinationSelected = mainNavigationCallback,
                   selfRecipient = mainToolbarState.self,
                   onSwipe = mainNavigationViewModel::moveNavigationBar,
-                  onGestureStateChanged = mainNavigationViewModel::updateNavigationGesture
+                  onGestureStateChanged = mainNavigationViewModel::updateNavigationGesture,
+                  navigationGestureState = navigationGestureState
                 )
 
                 if (!LocalResources.current.rememberIsSplitPane()) {
@@ -621,7 +629,15 @@ class MainActivity :
               )
 
               Box(
-                modifier = Modifier.weight(1f)
+                // Priority 1: everything inside this box is interface content (conversations,
+                // chat list, archive, settings, profile, media). Declaring it as a content region
+                // guarantees the navigation layer can never steal its scrolls or item swipes.
+                modifier = Modifier
+                  .weight(1f)
+                  .navigationContentGestureRegion(
+                    state = navigationGestureState,
+                    onContentClaimed = mainNavigationViewModel::onContentClaimedGesture
+                  )
               ) {
                 when (val destination = mainNavigationState.currentListLocation) {
                   MainNavigationListLocation.CHATS -> {
@@ -683,7 +699,8 @@ class MainActivity :
                   state = mainBottomChromeState,
                   callback = mainBottomChromeCallback,
                   megaphoneActionController = megaphoneActionController,
-                  modifier = Modifier.align(Alignment.BottomCenter)
+                  modifier = Modifier.align(Alignment.BottomCenter),
+                  navigationGestureState = navigationGestureState
                 )
               }
             }

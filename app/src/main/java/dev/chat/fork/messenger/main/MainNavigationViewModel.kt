@@ -457,13 +457,57 @@ class MainNavigationViewModel(
     onTabSelected(MainNavigationListLocation.PROFILE)
   }
 
+  /**
+   * Publishes live navigation-gesture progress so other chrome (toolbar, FABs) can stay
+   * synchronised with the moving navigation bar without owning the gesture themselves.
+   *
+   * [progress] is normalised to `[-1, 1]`; negative means the bar has travelled left.
+   */
   fun updateNavigationGesture(progress: Float, isActive: Boolean) {
+    val clamped = progress.coerceIn(-1f, 1f)
     internalMainNavigationState.update { state ->
       state.copy(
-        navigationGestureProgress = progress.coerceIn(-1f, 1f),
-        isNavigationGestureActive = isActive
+        navigationGestureProgress = clamped,
+        isNavigationGestureActive = isActive,
+        navigationPosition = when {
+          !isActive -> NavigationPosition.CENTER
+          clamped < 0f -> NavigationPosition.LEFT
+          clamped > 0f -> NavigationPosition.RIGHT
+          else -> NavigationPosition.CENTER
+        },
+        navigationGestureOwner = if (isActive) {
+          NavigationGestureOwner.NAVIGATION
+        } else {
+          NavigationGestureOwner.UNDECIDED
+        }
       )
     }
+  }
+
+  /**
+   * Records that interface content (a list, a conversation, a media viewer, an item swipe) has
+   * claimed the current gesture. The navigation layer must not move while this is the case.
+   */
+  fun onContentClaimedGesture() {
+    internalMainNavigationState.update { state ->
+      if (state.navigationGestureOwner == NavigationGestureOwner.CONTENT && !state.isNavigationGestureActive) {
+        state
+      } else {
+        state.copy(
+          navigationGestureOwner = NavigationGestureOwner.CONTENT,
+          isNavigationGestureActive = false,
+          navigationGestureProgress = 0f,
+          navigationPosition = NavigationPosition.CENTER
+        )
+      }
+    }
+  }
+
+  /**
+   * True when the navigation layer may currently move. Content gestures always win.
+   */
+  fun canNavigationOwnGesture(): Boolean {
+    return internalMainNavigationState.value.navigationGestureOwner != NavigationGestureOwner.CONTENT
   }
 
   fun moveNavigationBar(direction: NavigationBarMoveDirection) {

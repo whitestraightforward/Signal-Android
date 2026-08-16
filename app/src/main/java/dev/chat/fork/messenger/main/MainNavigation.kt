@@ -8,16 +8,12 @@ package dev.chat.fork.messenger.main
 import androidx.annotation.RawRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +21,6 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -44,17 +39,15 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -83,7 +76,6 @@ import org.signal.core.ui.compose.theme.SignalTheme
 import dev.chat.fork.messenger.R
 import dev.chat.fork.messenger.avatar.AvatarImage
 import dev.chat.fork.messenger.recipients.Recipient
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val LOTTIE_SIZE = 28.dp
@@ -139,7 +131,11 @@ data class MainNavigationState(
   val currentListLocation: MainNavigationListLocation = MainNavigationListLocation.CHATS,
   val compact: Boolean = false,
   val navigationGestureProgress: Float = 0f,
-  val isNavigationGestureActive: Boolean = false
+  val isNavigationGestureActive: Boolean = false,
+  /** Where the floating navigation bar is currently locked. */
+  val navigationPosition: NavigationPosition = NavigationPosition.CENTER,
+  /** Which component currently owns the in-flight gesture. */
+  val navigationGestureOwner: NavigationGestureOwner = NavigationGestureOwner.UNDECIDED
 )
 
 /** Controls drag and release behavior for the floating navigation indicator. */
@@ -183,7 +179,8 @@ fun MainNavigationBar(
   selfRecipient: Recipient = Recipient.UNKNOWN,
   onSwipe: ((NavigationBarMoveDirection) -> Unit)? = null,
   onGestureStateChanged: (progress: Float, isActive: Boolean) -> Unit = { _, _ -> },
-  swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
+  swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig(),
+  navigationGestureState: MainNavigationGestureState? = null
 ) {
   val navItems = NavigationMenuProvider.getItems(
     currentDestination = state.currentListLocation,
@@ -208,9 +205,23 @@ fun MainNavigationBar(
   }
 
   val containerColor = SignalTheme.colors.colorSurface2
-  var rawDragOffset by remember { mutableFloatStateOf(0f) }
-  var indicatorDragOffset by remember { mutableFloatStateOf(0f) }
   val layoutDirection = LocalLayoutDirection.current
+  val isRtl = layoutDirection == LayoutDirection.Rtl
+
+  val selectedDestination = if (state.currentListLocation == MainNavigationListLocation.ARCHIVE) {
+    MainNavigationListLocation.CHATS
+  } else {
+    state.currentListLocation
+  }
+  val selectedIndex = navItems.indexOfFirst { item ->
+    item.destination.toListLocationOrNull() == selectedDestination
+  }.coerceAtLeast(0)
+
+  // Always remembered (never conditionally) so the composition structure stays stable; callers
+  // may hand in a shared instance so the rest of the chrome can observe the same gesture.
+  val localGestureState = rememberMainNavigationGestureState()
+  val gestureState = navigationGestureState ?: localGestureState
+  val gestureEnabled = swipeConfig.enabled && onSwipe != null
 
   Surface(
     shape = RoundedCornerShape(28.dp),
@@ -229,43 +240,33 @@ fun MainNavigationBar(
     ) {
       val itemWidth = maxWidth / navItems.size
       val itemWidthPx = constraints.maxWidth.toFloat() / navItems.size
-      val selectedDestination = if (state.currentListLocation == MainNavigationListLocation.ARCHIVE) {
-        MainNavigationListLocation.CHATS
-      } else {
-        state.currentListLocation
+
+      // Publish the slot width so the gesture layer can reason about distances.
+      SideEffect {
+        gestureState.slotWidthPx = itemWidthPx
       }
-      val selectedIndex = navItems.indexOfFirst { item ->
-        item.destination.toListLocationOrNull() == selectedDestination
-      }.coerceAtLeast(0)
+
       val physicalIndex = if (layoutDirection == LayoutDirection.Ltr) {
         selectedIndex
       } else {
         navItems.lastIndex - selectedIndex
       }
+
       val indicatorBaseOffset by animateFloatAsState(
         targetValue = physicalIndex * itemWidthPx,
-        animationSpec = if (state.isNavigationGestureActive) {
+        animationSpec = if (gestureState.isDragging) {
           snap()
         } else {
           spring(dampingRatio = 0.78f, stiffness = 500f)
         },
         label = "navigationIndicatorOffset"
       )
-      val minimumSwipeDistancePx = with(LocalDensity.current) {
-        swipeConfig.minimumSwipeDistance.toPx()
-      }
-      val draggableState = rememberDraggableState { delta ->
-        rawDragOffset += delta
-        indicatorDragOffset = (rawDragOffset * swipeConfig.dragResistance.coerceIn(0f, 1f))
-          .coerceIn(-itemWidthPx, itemWidthPx)
-        onGestureStateChanged(indicatorDragOffset / itemWidthPx, true)
-      }
 
       Box(
         modifier = Modifier
           .offset {
             IntOffset(
-              x = (indicatorBaseOffset + indicatorDragOffset).roundToInt(),
+              x = (indicatorBaseOffset + gestureState.offsetPx).roundToInt(),
               y = 0
             )
           }
@@ -280,54 +281,16 @@ fun MainNavigationBar(
         modifier = Modifier
           .fillMaxWidth()
           .height(if (state.compact) 60.dp else 68.dp)
-          .draggable(
-            state = draggableState,
-            orientation = Orientation.Horizontal,
-            enabled = swipeConfig.enabled && onSwipe != null,
-            onDragStarted = { _ ->
-              rawDragOffset = 0f
-              indicatorDragOffset = 0f
-              onGestureStateChanged(0f, true)
-            },
-            onDragStopped = { velocity ->
-              val movement = if (abs(velocity) >= swipeConfig.minimumFlingVelocity) {
-                velocity
-              } else {
-                indicatorDragOffset
-              }
-              val moveDirection = when {
-                movement < 0f && layoutDirection == LayoutDirection.Ltr -> NavigationBarMoveDirection.PREVIOUS
-                movement < 0f -> NavigationBarMoveDirection.NEXT
-                layoutDirection == LayoutDirection.Ltr -> NavigationBarMoveDirection.NEXT
-                else -> NavigationBarMoveDirection.PREVIOUS
-              }
-              val canMove = when (moveDirection) {
-                NavigationBarMoveDirection.PREVIOUS -> selectedIndex > 0
-                NavigationBarMoveDirection.NEXT -> selectedIndex < navItems.lastIndex
-              }
-              val shouldMove = canMove && (
-                abs(indicatorDragOffset) >= minimumSwipeDistancePx ||
-                  abs(velocity) >= swipeConfig.minimumFlingVelocity
-                )
-              if (shouldMove) {
-                val targetShift = if (movement < 0f) -itemWidthPx else itemWidthPx
-                indicatorDragOffset -= targetShift
-                onSwipe?.invoke(moveDirection)
-                withFrameNanos { }
-              }
-
-              animate(
-                initialValue = indicatorDragOffset,
-                targetValue = 0f,
-                animationSpec = spring(dampingRatio = 0.78f, stiffness = 500f)
-              ) { value, _ ->
-                indicatorDragOffset = value
-                onGestureStateChanged(value / itemWidthPx, true)
-              }
-
-              rawDragOffset = 0f
-              onGestureStateChanged(0f, false)
-            }
+          .mainNavigationGesture(
+            state = gestureState,
+            region = NavigationGestureRegion.NAVIGATION,
+            enabled = gestureEnabled,
+            isRtl = isRtl,
+            canMovePrevious = { selectedIndex > 0 },
+            canMoveNext = { selectedIndex < navItems.lastIndex },
+            swipeConfig = swipeConfig,
+            onCommit = { direction -> onSwipe?.invoke(direction) },
+            onGestureStateChanged = onGestureStateChanged
           ),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
@@ -20,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.unit.IntOffset
 import org.signal.core.ui.compose.AllDevicePreviews
 import org.signal.core.ui.compose.Previews
 import org.signal.core.ui.compose.Snackbars
@@ -32,6 +34,10 @@ import dev.chat.fork.messenger.megaphone.Megaphone
 import dev.chat.fork.messenger.megaphone.MegaphoneActionController
 import dev.chat.fork.messenger.megaphone.Megaphones
 import dev.chat.fork.messenger.window.NavigationType
+import kotlin.math.roundToInt
+
+/** How much of the navigation travel the bottom chrome mirrors. */
+private const val BOTTOM_CHROME_FOLLOW_FACTOR = 0.33f
 
 interface MainBottomChromeCallback : MainFloatingActionButtonsCallback {
   fun onMegaphoneVisible(megaphone: Megaphone)
@@ -63,14 +69,27 @@ fun MainBottomChrome(
   state: MainBottomChromeState,
   callback: MainBottomChromeCallback,
   megaphoneActionController: MegaphoneActionController,
-  modifier: Modifier = Modifier
+  modifier: Modifier = Modifier,
+  navigationGestureState: MainNavigationGestureState? = null
 ) {
   val isSplitPane = LocalResources.current.rememberIsSplitPane()
   val navigationType = NavigationType.rememberNavigationType()
 
+  // The bottom chrome rides along with the navigation bar so the whole bottom region moves as a
+  // single, coherent surface. The travel is deliberately damped (a third of the navigation
+  // travel) so the floating action buttons never appear to chase the finger.
+  val followModifier = if (navigationGestureState != null) {
+    Modifier.offset {
+      IntOffset(x = (navigationGestureState.offsetPx * BOTTOM_CHROME_FOLLOW_FACTOR).roundToInt(), y = 0)
+    }
+  } else {
+    Modifier
+  }
+
   Column(
     modifier = modifier
       .fillMaxWidth()
+      .then(followModifier)
       .animateContentSize()
       .then(if (navigationType == NavigationType.RAIL) Modifier.navigationBarsPadding() else Modifier)
   ) {
