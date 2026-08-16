@@ -3,6 +3,7 @@ package dev.chat.fork.messenger.components.settings.app
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,9 +13,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -37,8 +40,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
@@ -76,6 +81,8 @@ import dev.chat.fork.messenger.components.settings.app.subscription.InAppPayment
 import dev.chat.fork.messenger.components.settings.app.subscription.completed.InAppPaymentsBottomSheetDelegate
 import dev.chat.fork.messenger.database.model.InAppPaymentSubscriberRecord
 import dev.chat.fork.messenger.keyvalue.SignalStore
+import dev.chat.fork.messenger.main.MainToolbarMode
+import dev.chat.fork.messenger.main.MainToolbarViewModel
 import dev.chat.fork.messenger.profiles.ProfileName
 import dev.chat.fork.messenger.recipients.Recipient
 import dev.chat.fork.messenger.util.CommunicationActions
@@ -87,6 +94,7 @@ class AppSettingsFragment : ComposeFragment(), Callbacks {
 
   private val viewModel: AppSettingsViewModel by viewModels()
   private val appSettingsRouter by viewModels<AppSettingsRouter>()
+  private val mainToolbarViewModel: MainToolbarViewModel by activityViewModels()
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     viewLifecycleOwner.lifecycle.addObserver(InAppPaymentsBottomSheetDelegate(childFragmentManager, viewLifecycleOwner))
@@ -129,6 +137,7 @@ class AppSettingsFragment : ComposeFragment(), Callbacks {
   override fun FragmentContent() {
     val state by viewModel.state.observeAsState()
     val self by viewModel.self.observeAsState()
+    val mainToolbarState by mainToolbarViewModel.state.collectAsStateWithLifecycle()
 
     if (state == null) return
     if (self == null) return
@@ -143,12 +152,20 @@ class AppSettingsFragment : ComposeFragment(), Callbacks {
       )
     }
 
-    AppSettingsContent(
-      self = self!!,
-      state = state!!,
-      bannerManager = bannerManager,
-      callbacks = this
-    )
+    if (mainToolbarState.mode == MainToolbarMode.SEARCH && mainToolbarState.searchQuery.isNotBlank()) {
+      AppSettingsSearchContent(
+        query = mainToolbarState.searchQuery,
+        state = state!!,
+        callbacks = this
+      )
+    } else {
+      AppSettingsContent(
+        self = self!!,
+        state = state!!,
+        bannerManager = bannerManager,
+        callbacks = this
+      )
+    }
   }
 
   override fun onNavigationClick() {
@@ -156,6 +173,9 @@ class AppSettingsFragment : ComposeFragment(), Callbacks {
   }
 
   override fun navigate(route: AppSettingsRoute) {
+    if (mainToolbarViewModel.state.value.mode == MainToolbarMode.SEARCH) {
+      mainToolbarViewModel.setToolbarMode(MainToolbarMode.FULL)
+    }
     appSettingsRouter.navigateTo(route)
   }
 
@@ -541,6 +561,180 @@ private fun AppSettingsContent(
               onClick = {
                 callbacks.navigate(AppSettingsRoute.InternalRoute.Internal)
               }
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+private data class SettingsSearchItem(
+  val title: String,
+  @DrawableRes val icon: Int,
+  val enabled: Boolean = true,
+  val onClick: () -> Unit
+)
+
+@Composable
+private fun AppSettingsSearchContent(
+  query: String,
+  state: AppSettingsState,
+  callbacks: Callbacks
+) {
+  val context = LocalContext.current
+  val donateUrl = stringResource(R.string.donate_url)
+  val isRegisteredAndUpToDate = state.isRegisteredAndUpToDate()
+  val searchItems = listOfNotNull(
+    SettingsSearchItem(
+      title = stringResource(R.string.CreateProfileActivity__profile),
+      icon = CoreUiR.drawable.symbol_person_circle_24,
+      onClick = { callbacks.navigate(AppSettingsRoute.AccountRoute.ManageProfile) }
+    ),
+    SettingsSearchItem(
+      title = stringResource(R.string.AccountSettingsFragment__account),
+      icon = CoreUiR.drawable.symbol_person_circle_24,
+      onClick = { callbacks.navigate(AppSettingsRoute.AccountRoute.Account) }
+    ),
+    if (state.isPrimaryDevice) {
+      SettingsSearchItem(
+        title = stringResource(R.string.preferences__linked_devices),
+        icon = CoreUiR.drawable.symbol_devices_24,
+        enabled = isRegisteredAndUpToDate,
+        onClick = { callbacks.navigate(AppSettingsRoute.LinkDeviceRoute.LinkDevice) }
+      )
+    } else {
+      null
+    },
+    SettingsSearchItem(
+      title = stringResource(R.string.preferences__donate_to_signal),
+      icon = R.drawable.symbol_heart_24,
+      onClick = {
+        if (state.allowUserToGoToDonationManagementScreen) {
+          callbacks.navigate(AppSettingsRoute.DonationsRoute.Donations())
+        } else {
+          CommunicationActions.openBrowserLink(context, donateUrl)
+        }
+      }
+    ),
+    SettingsSearchItem(
+      title = stringResource(R.string.preferences__appearance),
+      icon = R.drawable.symbol_appearance_24,
+      onClick = { callbacks.navigate(AppSettingsRoute.AppearanceRoute.Appearance) }
+    ),
+    SettingsSearchItem(
+      title = stringResource(R.string.preferences_chats__chats),
+      icon = R.drawable.symbol_chat_24,
+      enabled = isRegisteredAndUpToDate,
+      onClick = { callbacks.navigate(AppSettingsRoute.ChatsRoute.Chats) }
+    ),
+    SettingsSearchItem(
+      title = stringResource(R.string.preferences__stories),
+      icon = R.drawable.symbol_stories_24,
+      enabled = isRegisteredAndUpToDate,
+      onClick = { callbacks.navigate(AppSettingsRoute.StoriesRoute.Privacy(titleId = R.string.preferences__stories)) }
+    ),
+    SettingsSearchItem(
+      title = stringResource(R.string.preferences__notifications),
+      icon = R.drawable.symbol_bell_24,
+      enabled = isRegisteredAndUpToDate,
+      onClick = { callbacks.navigate(AppSettingsRoute.NotificationsRoute.Notifications) }
+    ),
+    SettingsSearchItem(
+      title = stringResource(R.string.preferences__privacy),
+      icon = CoreUiR.drawable.symbol_lock_24,
+      enabled = isRegisteredAndUpToDate,
+      onClick = { callbacks.navigate(AppSettingsRoute.PrivacyRoute.Privacy) }
+    ),
+    SettingsSearchItem(
+      title = stringResource(R.string.preferences_chats__backups),
+      icon = CoreUiR.drawable.symbol_backup_24,
+      enabled = isRegisteredAndUpToDate,
+      onClick = { callbacks.navigate(AppSettingsRoute.BackupsRoute.Backups()) }
+    ),
+    SettingsSearchItem(
+      title = stringResource(R.string.preferences__data_and_storage),
+      icon = R.drawable.symbol_data_24,
+      onClick = { callbacks.navigate(AppSettingsRoute.DataAndStorageRoute.DataAndStorage) }
+    ),
+    if (state.showAppUpdates) {
+      SettingsSearchItem(
+        title = "App updates",
+        icon = R.drawable.symbol_calendar_24,
+        onClick = { callbacks.navigate(AppSettingsRoute.AppUpdates) }
+      )
+    } else {
+      null
+    },
+    if (state.isPrimaryDevice && state.showPayments) {
+      SettingsSearchItem(
+        title = stringResource(R.string.preferences__payments),
+        icon = R.drawable.symbol_payment_24,
+        onClick = { callbacks.navigate(AppSettingsRoute.Payments) }
+      )
+    } else {
+      null
+    },
+    SettingsSearchItem(
+      title = stringResource(R.string.preferences__help),
+      icon = R.drawable.symbol_help_24,
+      onClick = { callbacks.navigate(AppSettingsRoute.HelpRoute.Settings()) }
+    ),
+    SettingsSearchItem(
+      title = stringResource(R.string.AppSettingsFragment__invite_your_friends),
+      icon = R.drawable.symbol_invite_24,
+      onClick = { callbacks.navigate(AppSettingsRoute.Invite) }
+    ),
+    if (state.showInternalPreferences) {
+      SettingsSearchItem(
+        title = "Labs",
+        icon = R.drawable.symbol_flash_24,
+        onClick = { callbacks.navigate(AppSettingsRoute.LabsRoute.Labs) }
+      )
+    } else {
+      null
+    },
+    if (state.showInternalPreferences) {
+      SettingsSearchItem(
+        title = stringResource(R.string.preferences__internal_preferences),
+        icon = R.drawable.symbol_key_24,
+        onClick = { callbacks.navigate(AppSettingsRoute.InternalRoute.Internal) }
+      )
+    } else {
+      null
+    }
+  ).filter { item ->
+    item.title.contains(query.trim(), ignoreCase = true)
+  }
+
+  Scaffolds.Settings(
+    title = stringResource(R.string.text_secure_normal__menu_settings),
+    navigationContentDescription = stringResource(R.string.CallScreenTopBar__go_back),
+    navigationIcon = SignalIcons.ArrowStart.imageVector,
+    onNavigationClick = callbacks::onNavigationClick
+  ) { contentPadding ->
+    Column(
+      modifier = Modifier.padding(contentPadding)
+    ) {
+      LazyColumn {
+        if (searchItems.isEmpty()) {
+          item {
+            Text(
+              text = stringResource(R.string.SearchFragment_no_results, query),
+              color = MaterialTheme.colorScheme.onSurfaceVariant,
+              textAlign = TextAlign.Center,
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+            )
+          }
+        } else {
+          items(searchItems, key = SettingsSearchItem::title) { item ->
+            Rows.TextRow(
+              text = item.title,
+              icon = painterResource(item.icon),
+              enabled = item.enabled,
+              onClick = item.onClick
             )
           }
         }
