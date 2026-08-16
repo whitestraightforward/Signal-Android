@@ -394,16 +394,18 @@ private fun PrimaryToolbar(
         }
       }
 
-      IconButtons.IconButton(
-        onClick = callback::onSearchClick,
-        modifier = Modifier.onPlaced {
-          onSearchButtonPositioned(it.positionInWindow().x + (it.size.width / 2f))
+      if (state.destination != MainNavigationListLocation.PROFILE) {
+        IconButtons.IconButton(
+          onClick = callback::onSearchClick,
+          modifier = Modifier.onPlaced {
+            onSearchButtonPositioned(it.positionInWindow().x + (it.size.width / 2f))
+          }
+        ) {
+          Icon(
+            imageVector = SignalIcons.Search.imageVector,
+            contentDescription = stringResource(R.string.conversation_list_search_description)
+          )
         }
-      ) {
-        Icon(
-          imageVector = SignalIcons.Search.imageVector,
-          contentDescription = stringResource(R.string.conversation_list_search_description)
-        )
       }
 
       val controller = remember { DropdownMenus.MenuController() }
