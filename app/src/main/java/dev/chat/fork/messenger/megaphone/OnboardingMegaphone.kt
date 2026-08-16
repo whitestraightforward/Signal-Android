@@ -58,7 +58,10 @@ import dev.chat.fork.messenger.wallpaper.ChatWallpaperActivity
 import org.signal.core.ui.R as CoreUiR
 
 /**
- * The onboarding megaphone (list of cards)
+ * The onboarding megaphone (list of cards).
+ *
+ * The "Get Started" section has been removed from the main interface.
+ * This composable intentionally renders nothing.
  */
 @Composable
 fun OnboardingMegaphone(
@@ -66,53 +69,7 @@ fun OnboardingMegaphone(
   modifier: Modifier = Modifier,
   onboardingState: OnboardingState = OnboardingState.rememberOnboardingState(megaphoneActionController)
 ) {
-  Column(
-    modifier = modifier
-      .background(MaterialTheme.colorScheme.background)
-      .padding(bottom = 22.dp)
-  ) {
-    Box(
-      modifier = Modifier
-        .height(24.dp)
-        .fillMaxWidth()
-        .background(
-          brush = Brush.verticalGradient(
-            colors = listOf(
-              Color.Transparent,
-              MaterialTheme.colorScheme.background
-            )
-          )
-        )
-    )
-
-    Text(
-      text = stringResource(R.string.Megaphones_get_started),
-      style = MaterialTheme.typography.titleSmall,
-      modifier = Modifier.padding(start = 16.dp, top = 4.dp),
-      color = MaterialTheme.colorScheme.onSurface
-    )
-
-    val onboardingItems = remember(onboardingState.displayState) {
-      OnboardingListItem.entries.filter(onboardingState.displayState::shouldDisplayListItem)
-    }
-
-    LazyRow(
-      modifier = Modifier.padding(top = 10.dp)
-    ) {
-      itemsIndexed(items = onboardingItems) { idx, item ->
-        OnboardingMegaphoneListItem(
-          onboardingListItem = item,
-          onActionClick = {
-            onboardingState.onItemActionClick(item)
-          },
-          onCloseClick = {
-            onboardingState.onItemCloseClick(item)
-          },
-          modifier = if (idx == 0) Modifier.padding(start = 16.dp) else Modifier
-        )
-      }
-    }
-  }
+  // Get Started section removed — renders nothing
 }
 
 /**

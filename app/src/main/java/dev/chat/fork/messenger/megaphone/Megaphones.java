@@ -549,7 +549,8 @@ public final class Megaphones {
   }
 
   private static boolean shouldShowOnboardingMegaphone(@NonNull Context context) {
-    return SignalStore.account().isPrimaryDevice() && SignalStore.onboarding().hasOnboarding(context);
+    // Get Started section removed from the main interface
+    return false;
   }
 
   private static boolean shouldShowNewLinkedDeviceMegaphone() {
