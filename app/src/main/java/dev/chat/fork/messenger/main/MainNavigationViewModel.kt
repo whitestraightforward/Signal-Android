@@ -457,6 +457,32 @@ class MainNavigationViewModel(
     onTabSelected(MainNavigationListLocation.PROFILE)
   }
 
+  fun moveNavigationBar(direction: NavigationBarMoveDirection) {
+    val state = internalMainNavigationState.value
+    val visibleDestinations = MainNavigationDestination.getVisible()
+      .filter { destination -> destination != MainNavigationDestination.STORIES || state.isStoriesFeatureEnabled }
+      .mapNotNull(MainNavigationDestination::toListLocationOrNull)
+
+    val currentDestination = if (state.currentListLocation == MainNavigationListLocation.ARCHIVE) {
+      MainNavigationListLocation.CHATS
+    } else {
+      state.currentListLocation
+    }
+    val currentIndex = visibleDestinations.indexOf(currentDestination)
+    if (currentIndex < 0) {
+      return
+    }
+
+    val indexChange = when (direction) {
+      NavigationBarMoveDirection.PREVIOUS -> -1
+      NavigationBarMoveDirection.NEXT -> 1
+    }
+    val targetIndex = (currentIndex + indexChange).coerceIn(visibleDestinations.indices)
+    if (targetIndex != currentIndex) {
+      onTabSelected(visibleDestinations[targetIndex])
+    }
+  }
+
   private fun onTabSelected(destination: MainNavigationListLocation) {
     viewModelScope.launch {
       val currentTab = internalMainNavigationState.value.currentListLocation

@@ -13,7 +13,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,8 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -130,11 +129,16 @@ data class MainNavigationState(
   val compact: Boolean = false
 )
 
-/** Controls horizontal swipe navigation without affecting the navigation destinations themselves. */
+/** Controls main-window swipe navigation without affecting the navigation destinations themselves. */
 data class NavigationSwipeConfig(
   val enabled: Boolean = true,
-  val minimumSwipeDistance: Dp = 48.dp
+  val minimumSwipeDistance: Dp = 64.dp
 )
+
+enum class NavigationBarMoveDirection {
+  PREVIOUS,
+  NEXT
+}
 
 // ============================================================================
 // Professional Floating Bottom Navigation Bar
@@ -161,8 +165,7 @@ fun MainNavigationBar(
   onDestinationSelected: (MainNavigationListLocation) -> Unit,
   onNewDestinationSelected: (MainNavigationDestination) -> Unit = {},
   menuConfig: NavigationMenuConfig = NavigationMenuConfig.default(),
-  selfRecipient: Recipient = Recipient.UNKNOWN,
-  swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
+  selfRecipient: Recipient = Recipient.UNKNOWN
 ) {
   val navItems = NavigationMenuProvider.getItems(
     currentDestination = state.currentListLocation,
@@ -192,13 +195,6 @@ fun MainNavigationBar(
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = 12.dp, vertical = 6.dp)
-      .navigationSwipe(
-        items = navItems,
-        currentDestination = state.currentListLocation,
-        config = swipeConfig,
-        layoutDirection = LocalLayoutDirection.current,
-        onItemSelected = onItemSelected
-      )
   ) {
     Row(
       modifier = Modifier
@@ -221,57 +217,61 @@ fun MainNavigationBar(
 }
 
 /**
- * Adds horizontal tab navigation to the bar while leaving vertical gestures available to the
- * surrounding content. A completed swipe selects the adjacent visible destination in the physical
- * direction of the gesture and respects right-to-left layouts.
+ * Observes unhandled horizontal swipes from the main window. Pointer changes are read during the
+ * final event pass and are never consumed, allowing child controls, scrolling, message gestures,
+ * and system navigation to keep priority.
  */
-private fun Modifier.navigationSwipe(
-  items: List<NavigationMenuItemData>,
-  currentDestination: MainNavigationListLocation,
-  config: NavigationSwipeConfig,
+fun Modifier.mainWindowNavigationSwipe(
   layoutDirection: LayoutDirection,
-  onItemSelected: (NavigationMenuItemData) -> Unit
+  config: NavigationSwipeConfig = NavigationSwipeConfig(),
+  onMove: (NavigationBarMoveDirection) -> Unit
 ): Modifier {
-  if (!config.enabled || items.size < 2) {
+  if (!config.enabled) {
     return this
   }
 
-  return pointerInput(items, currentDestination, config, layoutDirection) {
-    var totalDrag = 0f
+  return pointerInput(config, layoutDirection) {
+    awaitPointerEventScope {
+      while (true) {
+        val downEvent = awaitPointerEvent(PointerEventPass.Final)
+        val down = downEvent.changes.firstOrNull { change -> change.pressed && !change.previousPressed } ?: continue
+        val pointerId = down.id
+        val startPosition = down.position
+        var endPosition = startPosition
+        var handledByChild = down.isConsumed
+        var pointerIsDown = true
 
-    detectHorizontalDragGestures(
-      onDragStart = { totalDrag = 0f },
-      onDragCancel = { totalDrag = 0f },
-      onDragEnd = {
-        val effectiveDestination = if (currentDestination == MainNavigationListLocation.ARCHIVE) {
-          MainNavigationListLocation.CHATS
-        } else {
-          currentDestination
-        }
-        val currentIndex = items.indexOfFirst { item ->
-          item.destination.toListLocationOrNull() == effectiveDestination
-        }
+        while (pointerIsDown) {
+          val event = awaitPointerEvent(PointerEventPass.Final)
+          if (event.changes.count { change -> change.pressed } > 1) {
+            handledByChild = true
+          }
 
-        if (currentIndex >= 0 && abs(totalDrag) >= config.minimumSwipeDistance.toPx()) {
-          val physicalDirection = if (totalDrag > 0f) 1 else -1
-          val indexDirection = if (layoutDirection == LayoutDirection.Ltr) {
-            physicalDirection
+          val change = event.changes.firstOrNull { it.id == pointerId }
+          if (change == null) {
+            handledByChild = true
+            pointerIsDown = false
           } else {
-            -physicalDirection
-          }
-          val targetIndex = (currentIndex + indexDirection).coerceIn(items.indices)
-
-          if (targetIndex != currentIndex) {
-            onItemSelected(items[targetIndex])
+            handledByChild = handledByChild || change.isConsumed
+            endPosition = change.position
+            pointerIsDown = change.pressed
           }
         }
 
-        totalDrag = 0f
-      },
-      onHorizontalDrag = { _, dragAmount ->
-        totalDrag += dragAmount
+        val drag = endPosition - startPosition
+        if (!handledByChild && abs(drag.x) >= config.minimumSwipeDistance.toPx() && abs(drag.x) > abs(drag.y)) {
+          val moveTowardRight = drag.x < 0f
+          onMove(
+            when {
+              moveTowardRight && layoutDirection == LayoutDirection.Ltr -> NavigationBarMoveDirection.NEXT
+              moveTowardRight -> NavigationBarMoveDirection.PREVIOUS
+              layoutDirection == LayoutDirection.Ltr -> NavigationBarMoveDirection.PREVIOUS
+              else -> NavigationBarMoveDirection.NEXT
+            }
+          )
+        }
       }
-    )
+    }
   }
 }
 

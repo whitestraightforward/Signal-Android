@@ -64,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -158,6 +159,7 @@ import dev.chat.fork.messenger.main.MainNavigationRail
 import dev.chat.fork.messenger.main.MainNavigationRouter
 import dev.chat.fork.messenger.main.MainNavigationViewModel
 import dev.chat.fork.messenger.main.MainSnackbar
+import dev.chat.fork.messenger.main.mainWindowNavigationSwipe
 import dev.chat.fork.messenger.main.MainSnackbarHostKey
 import dev.chat.fork.messenger.main.MainToolbar
 import dev.chat.fork.messenger.main.MainToolbarCallback
@@ -559,7 +561,18 @@ class MainActivity :
 
         AppScaffold(
           navigator = wrappedNavigator,
-          modifier = convoTransitionState.writeContentToGraphicsLayer(),
+          modifier = convoTransitionState
+            .writeContentToGraphicsLayer()
+            .then(
+              if (navigationType == NavigationType.BAR && isNavigationBarVisible) {
+                Modifier.mainWindowNavigationSwipe(
+                  layoutDirection = LocalLayoutDirection.current,
+                  onMove = mainNavigationViewModel::moveNavigationBar
+                )
+              } else {
+                Modifier
+              }
+            ),
           paneExpansionState = paneExpansionState,
           contentWindowInsets = WindowInsets(),
           snackbarHost = {
