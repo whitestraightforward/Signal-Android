@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -165,7 +166,9 @@ fun MainNavigationBar(
   onDestinationSelected: (MainNavigationListLocation) -> Unit,
   onNewDestinationSelected: (MainNavigationDestination) -> Unit = {},
   menuConfig: NavigationMenuConfig = NavigationMenuConfig.default(),
-  selfRecipient: Recipient = Recipient.UNKNOWN
+  selfRecipient: Recipient = Recipient.UNKNOWN,
+  onSwipe: (NavigationBarMoveDirection) -> Unit = {},
+  swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
 ) {
   val navItems = NavigationMenuProvider.getItems(
     currentDestination = state.currentListLocation,
@@ -195,6 +198,11 @@ fun MainNavigationBar(
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = 12.dp, vertical = 6.dp)
+      .navigationBarSwipe(
+        layoutDirection = LocalLayoutDirection.current,
+        config = swipeConfig,
+        onMove = onSwipe
+      )
   ) {
     Row(
       modifier = Modifier
@@ -217,12 +225,11 @@ fun MainNavigationBar(
 }
 
 /**
- * Handles horizontal navigation swipes at the shared window layer. Events are observed before child
- * content so the gesture remains available over Compose and embedded Fragment interfaces alike.
- * Taps and vertical movement are left untouched; pointer input is consumed only after a deliberate
- * horizontal swipe crosses the configured distance.
+ * Handles horizontal swipes only within the navigation bar's bounds. Content outside the bar keeps
+ * full ownership of scrolling, message actions, text input, and other pointer interactions. Taps and
+ * vertical movement inside the bar are left untouched.
  */
-fun Modifier.mainWindowNavigationSwipe(
+private fun Modifier.navigationBarSwipe(
   layoutDirection: LayoutDirection,
   config: NavigationSwipeConfig = NavigationSwipeConfig(),
   onMove: (NavigationBarMoveDirection) -> Unit
