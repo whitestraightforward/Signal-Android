@@ -256,7 +256,7 @@ fun MainNavigationBar(
       }
       val draggableState = rememberDraggableState { delta ->
         rawDragOffset += delta
-        indicatorDragOffset = (rawDragOffset * swipeConfig.dragResistance.coerceIn(0f, 1f))
+        indicatorDragOffset = (-rawDragOffset * swipeConfig.dragResistance.coerceIn(0f, 1f))
           .coerceIn(-itemWidthPx, itemWidthPx)
         onGestureStateChanged(indicatorDragOffset / itemWidthPx, true)
       }
@@ -291,7 +291,7 @@ fun MainNavigationBar(
             },
             onDragStopped = { velocity ->
               val movement = if (abs(velocity) >= swipeConfig.minimumFlingVelocity) {
-                velocity
+                -velocity
               } else {
                 indicatorDragOffset
               }
