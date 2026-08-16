@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -58,7 +59,6 @@ import org.signal.core.ui.compose.Dividers
 import org.signal.core.ui.compose.IconButtons
 import org.signal.core.ui.compose.Previews
 import org.signal.core.ui.compose.Rows
-import org.signal.core.ui.compose.Scaffolds
 import org.signal.core.ui.compose.SignalIcons
 import org.signal.core.ui.compose.horizontalGutters
 import org.signal.core.ui.compose.theme.SignalTheme
@@ -227,12 +227,7 @@ private fun AppSettingsContent(
 ) {
   val isRegisteredAndUpToDate by rememberUpdatedState(state.isRegisteredAndUpToDate())
 
-  Scaffolds.Settings(
-    title = stringResource(R.string.text_secure_normal__menu_settings),
-    navigationContentDescription = stringResource(R.string.CallScreenTopBar__go_back),
-    navigationIcon = SignalIcons.ArrowStart.imageVector,
-    onNavigationClick = callbacks::onNavigationClick
-  ) { contentPadding ->
+  Scaffold { contentPadding ->
     Column(
       modifier = Modifier.padding(contentPadding)
     ) {
@@ -707,12 +702,7 @@ private fun AppSettingsSearchContent(
     item.title.contains(query.trim(), ignoreCase = true)
   }
 
-  Scaffolds.Settings(
-    title = stringResource(R.string.text_secure_normal__menu_settings),
-    navigationContentDescription = stringResource(R.string.CallScreenTopBar__go_back),
-    navigationIcon = SignalIcons.ArrowStart.imageVector,
-    onNavigationClick = callbacks::onNavigationClick
-  ) { contentPadding ->
+  Scaffold { contentPadding ->
     Column(
       modifier = Modifier.padding(contentPadding)
     ) {
