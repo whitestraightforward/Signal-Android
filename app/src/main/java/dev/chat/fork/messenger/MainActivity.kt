@@ -1220,7 +1220,7 @@ class MainActivity :
     }
 
     override fun onSettingsClick() {
-      openSettings.launch(AppSettingsActivity.home(this@MainActivity))
+      mainNavigationViewModel.onSettingsSelected()
     }
 
     override fun onNotificationProfileClick() {
@@ -1228,7 +1228,7 @@ class MainActivity :
     }
 
     override fun onProxyClick() {
-      startActivity(AppSettingsActivity.proxy(this@MainActivity))
+      mainNavigationViewModel.onSettingsSelected()
     }
 
     override fun onSearchClick() {
