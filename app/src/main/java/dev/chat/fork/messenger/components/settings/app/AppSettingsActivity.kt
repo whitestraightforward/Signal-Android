@@ -95,6 +95,11 @@ class AppSettingsActivity : DSLSettingsActivity(), GooglePayComponent {
         } else {
           AppSettingsFragmentDirections.actionDirectToLinkedDeviceAccountSettingsFragment()
         }
+        AppSettingsRoute.AppearanceRoute.Appearance -> AppSettingsFragmentDirections.actionAppSettingsFragmentToAppearanceSettingsFragment()
+        is AppSettingsRoute.StoriesRoute.Privacy -> AppSettingsFragmentDirections.actionAppSettingsFragmentToStoryPrivacySettings(appSettingsRoute.titleId)
+        AppSettingsRoute.AppUpdates -> AppSettingsFragmentDirections.actionAppSettingsFragmentToAppUpdatesSettingsFragment()
+        AppSettingsRoute.LabsRoute.Labs -> AppSettingsFragmentDirections.actionAppSettingsFragmentToLabsSettingsFragment()
+        AppSettingsRoute.InternalRoute.Internal -> AppSettingsFragmentDirections.actionAppSettingsFragmentToInternalSettingsFragment()
         else -> error("Unsupported start location: ${appSettingsRoute?.javaClass?.name}")
       }
     }
@@ -257,6 +262,12 @@ class AppSettingsActivity : DSLSettingsActivity(), GooglePayComponent {
 
     @JvmStatic
     fun upgradeLocalBackups(context: Context): Intent = getIntentForStartLocation(context, AppSettingsRoute.BackupsRoute.Local(triggerUpdateFlow = true))
+
+    /**
+     * Generic entry point for opening settings full-screen directly at [startRoute].
+     */
+    @JvmStatic
+    fun forRoute(context: Context, startRoute: AppSettingsRoute): Intent = getIntentForStartLocation(context, startRoute)
 
     private fun getIntentForStartLocation(context: Context, startRoute: AppSettingsRoute): Intent {
       return Intent(context, AppSettingsActivity::class.java)

@@ -63,6 +63,8 @@ import org.signal.core.ui.compose.SignalIcons
 import org.signal.core.ui.compose.horizontalGutters
 import org.signal.core.ui.compose.theme.SignalTheme
 import org.signal.core.util.Util
+import dev.chat.fork.messenger.MainActivity
+import dev.chat.fork.messenger.MainNavigator
 import dev.chat.fork.messenger.R
 import dev.chat.fork.messenger.avatar.AvatarImage
 import dev.chat.fork.messenger.backup.v2.BackupRepository
@@ -102,6 +104,14 @@ class AppSettingsFragment : ComposeFragment(), Callbacks {
     viewLifecycleOwner.lifecycleScope.launch {
       repeatOnLifecycle(Lifecycle.State.RESUMED) {
         appSettingsRouter.currentRoute.collect { route ->
+          if (shouldOpenFullScreen(route)) {
+            requireActivity().startActivityForResult(
+              AppSettingsActivity.forRoute(requireContext(), route),
+              MainNavigator.REQUEST_CONFIG_CHANGES
+            )
+            return@collect
+          }
+
           when (route) {
             is AppSettingsRoute.BackupsRoute.Remote -> findNavController().safeNavigate(R.id.action_appSettingsFragment_to_remoteBackupsSettingsFragment)
             is AppSettingsRoute.AccountRoute.Account -> if (SignalStore.account.isPrimaryDevice) {
@@ -177,6 +187,16 @@ class AppSettingsFragment : ComposeFragment(), Callbacks {
       mainToolbarViewModel.setToolbarMode(MainToolbarMode.FULL)
     }
     appSettingsRouter.navigateTo(route)
+  }
+
+  /**
+   * Returns whether [route] should open full-screen instead of inside the embedded settings pane.
+   * Routes that already open their own activities keep their existing navigation behavior.
+   */
+  private fun shouldOpenFullScreen(route: AppSettingsRoute): Boolean {
+    return requireActivity() is MainActivity &&
+      route !is AppSettingsRoute.AccountRoute.ManageProfile &&
+      route !is AppSettingsRoute.Payments
   }
 
   override fun onResume() {
