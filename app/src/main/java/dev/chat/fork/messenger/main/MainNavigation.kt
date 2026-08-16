@@ -13,6 +13,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -53,6 +56,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.airbnb.lottie.LottieProperty
@@ -70,6 +74,7 @@ import org.signal.core.ui.compose.theme.SignalTheme
 import dev.chat.fork.messenger.R
 import dev.chat.fork.messenger.avatar.AvatarImage
 import dev.chat.fork.messenger.recipients.Recipient
+import kotlin.math.abs
 
 private val LOTTIE_SIZE = 28.dp
 
@@ -125,6 +130,12 @@ data class MainNavigationState(
   val compact: Boolean = false
 )
 
+/** Controls horizontal swipe navigation without affecting the navigation destinations themselves. */
+data class NavigationSwipeConfig(
+  val enabled: Boolean = true,
+  val minimumSwipeDistance: Dp = 48.dp
+)
+
 // ============================================================================
 // Professional Floating Bottom Navigation Bar
 // ============================================================================
@@ -150,7 +161,8 @@ fun MainNavigationBar(
   onDestinationSelected: (MainNavigationListLocation) -> Unit,
   onNewDestinationSelected: (MainNavigationDestination) -> Unit = {},
   menuConfig: NavigationMenuConfig = NavigationMenuConfig.default(),
-  selfRecipient: Recipient = Recipient.UNKNOWN
+  selfRecipient: Recipient = Recipient.UNKNOWN,
+  swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
 ) {
   val navItems = NavigationMenuProvider.getItems(
     currentDestination = state.currentListLocation,
@@ -160,6 +172,15 @@ fun MainNavigationBar(
     isStoriesEnabled = state.isStoriesFeatureEnabled,
     config = menuConfig
   )
+
+  val onItemSelected: (NavigationMenuItemData) -> Unit = { item ->
+    val listLocation = item.destination.toListLocationOrNull()
+    if (listLocation != null) {
+      onDestinationSelected(listLocation)
+    } else {
+      onNewDestinationSelected(item.destination)
+    }
+  }
 
   val containerColor = SignalTheme.colors.colorSurface2
 
@@ -171,6 +192,13 @@ fun MainNavigationBar(
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = 12.dp, vertical = 6.dp)
+      .navigationSwipe(
+        items = navItems,
+        currentDestination = state.currentListLocation,
+        config = swipeConfig,
+        layoutDirection = LocalLayoutDirection.current,
+        onItemSelected = onItemSelected
+      )
   ) {
     Row(
       modifier = Modifier
@@ -185,17 +213,65 @@ fun MainNavigationBar(
           item = item,
           compact = state.compact,
           selfRecipient = selfRecipient,
-          onSelected = {
-            val listLocation = item.destination.toListLocationOrNull()
-            if (listLocation != null) {
-              onDestinationSelected(listLocation)
-            } else {
-              onNewDestinationSelected(item.destination)
-            }
-          }
+          onSelected = { onItemSelected(item) }
         )
       }
     }
+  }
+}
+
+/**
+ * Adds horizontal tab navigation to the bar while leaving vertical gestures available to the
+ * surrounding content. A completed swipe selects the adjacent visible destination in the physical
+ * direction of the gesture and respects right-to-left layouts.
+ */
+private fun Modifier.navigationSwipe(
+  items: List<NavigationMenuItemData>,
+  currentDestination: MainNavigationListLocation,
+  config: NavigationSwipeConfig,
+  layoutDirection: LayoutDirection,
+  onItemSelected: (NavigationMenuItemData) -> Unit
+): Modifier {
+  if (!config.enabled || items.size < 2) {
+    return this
+  }
+
+  return pointerInput(items, currentDestination, config, layoutDirection) {
+    var totalDrag = 0f
+
+    detectHorizontalDragGestures(
+      onDragStart = { totalDrag = 0f },
+      onDragCancel = { totalDrag = 0f },
+      onDragEnd = {
+        val effectiveDestination = if (currentDestination == MainNavigationListLocation.ARCHIVE) {
+          MainNavigationListLocation.CHATS
+        } else {
+          currentDestination
+        }
+        val currentIndex = items.indexOfFirst { item ->
+          item.destination.toListLocationOrNull() == effectiveDestination
+        }
+
+        if (currentIndex >= 0 && abs(totalDrag) >= config.minimumSwipeDistance.toPx()) {
+          val physicalDirection = if (totalDrag > 0f) 1 else -1
+          val indexDirection = if (layoutDirection == LayoutDirection.Ltr) {
+            physicalDirection
+          } else {
+            -physicalDirection
+          }
+          val targetIndex = (currentIndex + indexDirection).coerceIn(items.indices)
+
+          if (targetIndex != currentIndex) {
+            onItemSelected(items[targetIndex])
+          }
+        }
+
+        totalDrag = 0f
+      },
+      onHorizontalDrag = { _, dragAmount ->
+        totalDrag += dragAmount
+      }
+    )
   }
 }
 
