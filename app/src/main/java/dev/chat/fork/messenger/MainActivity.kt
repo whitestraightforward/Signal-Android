@@ -124,8 +124,6 @@ import dev.chat.fork.messenger.components.compose.ConnectivityWarningBottomSheet
 import dev.chat.fork.messenger.components.compose.DeviceSpecificNotificationBottomSheet
 import dev.chat.fork.messenger.components.settings.app.AppSettingsActivity
 import dev.chat.fork.messenger.components.settings.app.AppSettingsActivity.Companion.manageSubscriptions
-import dev.chat.fork.messenger.components.settings.app.AppSettingsFragment
-import dev.chat.fork.messenger.profiles.manage.EditProfileFragment
 import dev.chat.fork.messenger.components.settings.app.notifications.manual.NotificationProfileSelectionFragment
 import dev.chat.fork.messenger.components.settings.app.subscription.GooglePayComponent
 import dev.chat.fork.messenger.components.settings.app.subscription.GooglePayRepository
@@ -661,7 +659,7 @@ class MainActivity :
                   MainNavigationListLocation.SETTINGS -> {
                     val state = key(destination) { rememberFragmentState() }
                     AndroidFragment(
-                      clazz = AppSettingsFragment::class.java,
+                      clazz = EmbeddedSettingsFragment::class.java,
                       fragmentState = state,
                       modifier = Modifier.fillMaxSize()
                     )
@@ -670,7 +668,7 @@ class MainActivity :
                   MainNavigationListLocation.PROFILE -> {
                     val state = key(destination) { rememberFragmentState() }
                     AndroidFragment(
-                      clazz = EditProfileFragment::class.java,
+                      clazz = EmbeddedProfileFragment::class.java,
                       fragmentState = state,
                       modifier = Modifier.fillMaxSize()
                     )
