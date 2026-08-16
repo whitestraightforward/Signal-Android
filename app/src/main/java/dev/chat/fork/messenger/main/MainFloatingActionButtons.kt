@@ -67,7 +67,9 @@ fun MainFloatingActionButtons(
   destination: MainNavigationListLocation,
   callback: MainFloatingActionButtonsCallback,
   modifier: Modifier = Modifier,
-  navigationType: NavigationType = NavigationType.rememberNavigationType()
+  navigationType: NavigationType = NavigationType.rememberNavigationType(),
+  onNavigationSwipe: ((NavigationBarMoveDirection) -> Unit)? = null,
+  swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
 ) {
   val boxHeightDp = (ACTION_BUTTON_SIZE * 2 + ACTION_BUTTON_SPACING)
   val boxHeightPx = with(LocalDensity.current) {
@@ -92,6 +94,10 @@ fun MainFloatingActionButtons(
     modifier = modifier
       .padding(ACTION_BUTTON_SPACING)
       .height(boxHeightDp)
+      .mainNavigationSwipe(
+        config = swipeConfig,
+        onMove = onNavigationSwipe
+      )
   ) {
     SecondaryActionButton(
       destination = destination,

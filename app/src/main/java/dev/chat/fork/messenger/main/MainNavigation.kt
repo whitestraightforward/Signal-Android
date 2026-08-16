@@ -167,7 +167,7 @@ fun MainNavigationBar(
   onNewDestinationSelected: (MainNavigationDestination) -> Unit = {},
   menuConfig: NavigationMenuConfig = NavigationMenuConfig.default(),
   selfRecipient: Recipient = Recipient.UNKNOWN,
-  onSwipe: (NavigationBarMoveDirection) -> Unit = {},
+  onSwipe: ((NavigationBarMoveDirection) -> Unit)? = null,
   swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
 ) {
   val navItems = NavigationMenuProvider.getItems(
@@ -198,8 +198,7 @@ fun MainNavigationBar(
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = 12.dp, vertical = 6.dp)
-      .navigationBarSwipe(
-        layoutDirection = LocalLayoutDirection.current,
+      .mainNavigationSwipe(
         config = swipeConfig,
         onMove = onSwipe
       )
@@ -225,19 +224,31 @@ fun MainNavigationBar(
 }
 
 /**
- * Handles horizontal swipes only within the navigation bar's bounds. Content outside the bar keeps
- * full ownership of scrolling, message actions, text input, and other pointer interactions. Taps and
- * vertical movement inside the bar are left untouched.
+ * Handles horizontal swipes only within components that belong to the shared navigation chrome.
+ * Application content keeps full ownership of scrolling, message actions, text input, and other
+ * pointer interactions. Taps and vertical movement inside navigation components are left untouched.
  */
-private fun Modifier.navigationBarSwipe(
-  layoutDirection: LayoutDirection,
+@Composable
+internal fun Modifier.mainNavigationSwipe(
   config: NavigationSwipeConfig = NavigationSwipeConfig(),
-  onMove: (NavigationBarMoveDirection) -> Unit
+  onMove: ((NavigationBarMoveDirection) -> Unit)?
 ): Modifier {
-  if (!config.enabled) {
+  if (!config.enabled || onMove == null) {
     return this
   }
 
+  return navigationSwipePointerInput(
+    layoutDirection = LocalLayoutDirection.current,
+    config = config,
+    onMove = onMove
+  )
+}
+
+private fun Modifier.navigationSwipePointerInput(
+  layoutDirection: LayoutDirection,
+  config: NavigationSwipeConfig,
+  onMove: (NavigationBarMoveDirection) -> Unit
+): Modifier {
   return pointerInput(config, layoutDirection) {
     awaitPointerEventScope {
       while (true) {
@@ -455,10 +466,16 @@ private fun BoxScope.NavigationBadgePill(count: Int) {
 fun MainNavigationRail(
   state: MainNavigationState,
   mainFloatingActionButtonsCallback: MainFloatingActionButtonsCallback,
-  onDestinationSelected: (MainNavigationListLocation) -> Unit
+  onDestinationSelected: (MainNavigationListLocation) -> Unit,
+  onSwipe: ((NavigationBarMoveDirection) -> Unit)? = null,
+  swipeConfig: NavigationSwipeConfig = NavigationSwipeConfig()
 ) {
   NavigationRail(
-    containerColor = SignalTheme.colors.colorSurface1
+    containerColor = SignalTheme.colors.colorSurface1,
+    modifier = Modifier.mainNavigationSwipe(
+      config = swipeConfig,
+      onMove = onSwipe
+    )
   ) {
     Spacer(modifier = Modifier.height(40.dp).weight(1f, fill = false))
 

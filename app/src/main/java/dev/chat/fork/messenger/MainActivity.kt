@@ -596,7 +596,8 @@ class MainActivity :
               MainNavigationRail(
                 state = mainNavigationState,
                 mainFloatingActionButtonsCallback = mainBottomChromeCallback,
-                onDestinationSelected = mainNavigationCallback
+                onDestinationSelected = mainNavigationCallback,
+                onSwipe = mainNavigationViewModel::moveNavigationBar
               )
             }
           },
@@ -682,7 +683,8 @@ class MainActivity :
                   state = mainBottomChromeState,
                   callback = mainBottomChromeCallback,
                   megaphoneActionController = megaphoneActionController,
-                  modifier = Modifier.align(Alignment.BottomCenter)
+                  modifier = Modifier.align(Alignment.BottomCenter),
+                  onNavigationSwipe = mainNavigationViewModel::moveNavigationBar
                 )
               }
             }
