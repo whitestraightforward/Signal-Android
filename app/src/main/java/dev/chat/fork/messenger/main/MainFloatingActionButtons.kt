@@ -100,16 +100,18 @@ fun MainFloatingActionButtons(
       elevation = shadowElevation
     )
 
-    Box(
-      modifier = Modifier.align(primaryButtonAlignment)
-    ) {
-      PrimaryActionButton(
-        destination = destination,
-        onNewChatClick = callback::onNewChatClick,
-        onCameraClick = callback::onCameraClick,
-        onNewCallClick = callback::onNewCallClick,
-        elevation = shadowElevation
-      )
+    if (destination != MainNavigationListLocation.SETTINGS && destination != MainNavigationListLocation.PROFILE) {
+      Box(
+        modifier = Modifier.align(primaryButtonAlignment)
+      ) {
+        PrimaryActionButton(
+          destination = destination,
+          onNewChatClick = callback::onNewChatClick,
+          onCameraClick = callback::onCameraClick,
+          onNewCallClick = callback::onNewCallClick,
+          elevation = shadowElevation
+        )
+      }
     }
   }
 }
