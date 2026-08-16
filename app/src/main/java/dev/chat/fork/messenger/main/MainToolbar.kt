@@ -17,14 +17,11 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -41,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -51,7 +47,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
@@ -65,8 +60,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import org.signal.core.ui.compose.DayNightPreviews
 import org.signal.core.ui.compose.DropdownMenus
@@ -76,17 +69,13 @@ import org.signal.core.ui.compose.SignalIcons
 import org.signal.core.ui.compose.TextFields
 import org.signal.core.ui.compose.Tooltips
 import org.signal.core.ui.compose.circularReveal
-import org.signal.core.ui.compose.theme.Dimensions
 import org.signal.core.ui.compose.theme.SignalTheme
 import dev.chat.fork.messenger.R
-import dev.chat.fork.messenger.avatar.AvatarImage
 import dev.chat.fork.messenger.calls.log.CallLogFilter
 import dev.chat.fork.messenger.components.compose.ActionModeTopBar
-import dev.chat.fork.messenger.components.settings.app.subscription.BadgeImageSmall
 import dev.chat.fork.messenger.conversationlist.model.ConversationFilter
 import dev.chat.fork.messenger.keyvalue.SignalStore
 import dev.chat.fork.messenger.recipients.Recipient
-import dev.chat.fork.messenger.recipients.rememberRecipientField
 
 interface MainToolbarCallback {
   fun onNewGroupClick()
@@ -202,8 +191,7 @@ fun MainToolbar(
 
           PrimaryToolbar(
             state = state,
-            callback = callback,
-            enabled = state.mode != MainToolbarMode.SEARCH
+            callback = callback
           ) {
             revealOffset = Offset(it / maxWidth, 0.5f)
           }
@@ -378,7 +366,6 @@ private fun ArchiveToolbar(
 private fun PrimaryToolbar(
   state: MainToolbarState,
   callback: MainToolbarCallback,
-  enabled: Boolean = true,
   onSearchButtonPositioned: (Float) -> Unit
 ) {
   TopAppBar(
@@ -386,52 +373,6 @@ private fun PrimaryToolbar(
       containerColor = state.toolbarColor ?: MaterialTheme.colorScheme.surface,
       scrolledContainerColor = SignalTheme.colors.colorSurface2
     ),
-    navigationIcon = {
-      val contentDescription = stringResource(R.string.conversation_list_settings_shortcut)
-      Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-          .padding(start = Dimensions.space5, end = Dimensions.space4)
-          .size(Dimensions.minTouchTarget)
-      ) {
-        AvatarImage(
-          recipient = state.self,
-          modifier = Modifier
-            .clip(CircleShape)
-            .size(Dimensions.toolbarAvatarSize),
-          contentDescription = contentDescription
-        )
-
-        val interactionSource = remember { MutableInteractionSource() }
-        Box(
-          modifier = Modifier
-            .fillMaxSize()
-            .clickable(
-              enabled = enabled,
-              onClick = callback::onSettingsClick,
-              interactionSource = interactionSource,
-              indication = ripple(radius = 16.dp)
-            )
-            .semantics {
-              this.contentDescription = contentDescription
-            }
-        )
-
-        val badge by rememberRecipientField(state.self) { featuredBadge }
-
-        BadgeImageSmall(
-          badge = badge,
-          modifier = Modifier
-            .padding(start = 14.dp, top = 16.dp)
-            .size(Dimensions.space4)
-        )
-
-        HeadsUpIndicator(
-          state = state,
-          modifier = Modifier.padding(start = Dimensions.space5, bottom = Dimensions.space5)
-        )
-      }
-    },
     title = {
       Text(
         text = stringResource(R.string.app_name),
@@ -545,33 +486,6 @@ private fun ProxyAction(
       Image(
         imageVector = ImageVector.vectorResource(state.proxyState.icon),
         contentDescription = stringResource(R.string.MainToolbar__proxy_content_description)
-      )
-    }
-  }
-}
-
-@Composable
-private fun HeadsUpIndicator(state: MainToolbarState, modifier: Modifier = Modifier) {
-  if (!state.hasUnreadPayments && !state.hasFailedBackups && !state.isOutOfRemoteStorageSpace) {
-    return
-  }
-
-  val color = when {
-    state.isOutOfRemoteStorageSpace -> Color.Transparent
-    state.hasFailedBackups -> Color(0xFFFFCC00)
-    else -> MaterialTheme.colorScheme.primary
-  }
-
-  Box(
-    modifier = modifier
-      .size(13.dp)
-      .background(color = color, shape = CircleShape)
-  ) {
-    if (state.isOutOfRemoteStorageSpace) {
-      Icon(
-        imageVector = ImageVector.vectorResource(R.drawable.symbol_error_circle_fill_16),
-        tint = MaterialTheme.colorScheme.error,
-        contentDescription = null
       )
     }
   }
