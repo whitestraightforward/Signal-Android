@@ -103,14 +103,26 @@ smooth acceleration, natural deceleration and spring-based settling with no sudd
 committing swipe follows through in the direction of the throw, applies the destination change,
 then glides in from the opposite side so the swap reads as a single continuous movement.
 
-## 7. Conflict prevention
+## 7. System gesture edges
+
+The navigation bar spans the full width, so its ends sit underneath the Android system
+back-gesture strips (~20dp on each vertical screen edge under edge-to-edge). The platform claims
+horizontal drags that start there before Compose sees them.
+
+Because a right swipe naturally begins on the left-hand tab, that made right swipes appear
+completely dead while left swipes worked. The bar therefore opts out via
+`Modifier.systemGestureExclusion()`, the same approach already used by `VideoTrimBar`. The
+exclusion is scoped to the navigation bar only, so the system back gesture keeps working
+everywhere else.
+
+## 8. Conflict prevention
 
 Navigation gestures can never override message scrolling, chat scrolling, archive swipe actions,
 list scrolling, text input or media gestures. `Modifier.navigationContentGestureRegion` marks the
 whole content pane as content-owned, and the recognition loop yields immediately on any consumed
 pointer or vertical intent.
 
-## 8. Scope
+## 9. Scope
 
 Only the navigation interaction layer changed. Messaging, network, data handling, existing
 features and application workflows are untouched.

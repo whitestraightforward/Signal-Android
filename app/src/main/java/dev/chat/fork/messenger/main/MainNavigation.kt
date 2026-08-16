@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -281,6 +282,12 @@ fun MainNavigationBar(
         modifier = Modifier
           .fillMaxWidth()
           .height(if (state.compact) 60.dp else 68.dp)
+          // The bar spans the full width, so its left and right ends sit underneath the system
+          // back-gesture edge strips. Without this the platform swallows any horizontal drag that
+          // starts there before Compose ever sees it, which made right swipes (which naturally
+          // begin on the left-hand tab) appear completely dead. Opting the bar out of the system
+          // gesture areas lets both directions reach the recognition layer.
+          .systemGestureExclusion()
           .mainNavigationGesture(
             state = gestureState,
             region = NavigationGestureRegion.NAVIGATION,
