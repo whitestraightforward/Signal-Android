@@ -254,6 +254,7 @@ class MainActivity :
 
   private val openSettings: ActivityResultLauncher<Intent> = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
     if (result.resultCode == RESULT_CONFIG_CHANGED) {
+      toolbarViewModel.clearToolbarColor()
       recreate()
     }
   }
@@ -951,6 +952,7 @@ class MainActivity :
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     super.onActivityResult(requestCode, resultCode, data)
     if (requestCode == MainNavigator.REQUEST_CONFIG_CHANGES && resultCode == RESULT_CONFIG_CHANGED) {
+      toolbarViewModel.clearToolbarColor()
       recreate()
     }
 
