@@ -16,21 +16,27 @@
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_usernameLinkSettingsFragment"
             app:destination="@id/username_link_settings"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_usernameEducationFragment"
             app:destination="@id/manageProfileActivity"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit">
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" >
             <argument
                 android:name="start_at_username"
                 android:defaultValue="true"
@@ -42,35 +48,45 @@
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_linkedDeviceAccountSettingsFragment"
             app:destination="@id/linkedDeviceAccountSettingsFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_remoteBackupsSettingsFragment"
             app:destination="@id/remoteBackupsSettingsFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_linkDeviceFragment"
             app:destination="@id/linkDeviceFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_paymentsActivity"
             app:destination="@id/paymentsActivity"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_appearanceSettingsFragment"
             app:destination="@id/appearanceSettingsFragment"
@@ -86,84 +102,108 @@
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_notificationsSettingsFragment"
             app:destination="@id/notificationsSettingsFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_privacySettingsFragment"
             app:destination="@id/privacy_settings"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_dataAndStorageSettingsFragment"
             app:destination="@id/dataAndStorageSettingsFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_manageProfileActivity"
             app:destination="@id/manageProfileActivity"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_helpSettingsFragment"
             app:destination="@id/helpSettingsFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_inviteFragment"
             app:destination="@id/inviteFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_appUpdatesSettingsFragment"
             app:destination="@id/appUpdatesFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_internalSettingsFragment"
             app:destination="@id/internalSettingsFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_labsSettingsFragment"
             app:destination="@id/labsSettingsFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_manageDonationsFragment"
             app:destination="@id/manageDonationsFragment"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit" />
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" />
         <action
             android:id="@+id/action_appSettingsFragment_to_storyPrivacySettings"
             app:destination="@+id/story_privacy_settings"
             app:enterAnim="@anim/fragment_open_enter"
             app:exitAnim="@anim/fragment_open_exit"
             app:popEnterAnim="@anim/fragment_close_enter"
-            app:popExitAnim="@anim/fragment_close_exit">
+            app:popExitAnim="@anim/fragment_close_exit"
+            app:popUpTo="@id/app_settings"
+            app:popUpToInclusive="true" >
 
             <argument
                 android:name="title_id"
