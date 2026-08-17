@@ -254,8 +254,9 @@ class MainActivity :
 
   private val openSettings: ActivityResultLauncher<Intent> = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
     if (result.resultCode == RESULT_CONFIG_CHANGED) {
+      // Theme already applied via AppCompatDelegate auto-recreation; just clear stale toolbar color
+      // to avoid extra recreate() that causes double-recreation and ANR (no focused window).
       toolbarViewModel.clearToolbarColor()
-      recreate()
     }
   }
 
@@ -953,7 +954,6 @@ class MainActivity :
     super.onActivityResult(requestCode, resultCode, data)
     if (requestCode == MainNavigator.REQUEST_CONFIG_CHANGES && resultCode == RESULT_CONFIG_CHANGED) {
       toolbarViewModel.clearToolbarColor()
-      recreate()
     }
 
     if (resultCode == RESULT_OK && requestCode == CreateSvrPinActivity.REQUEST_NEW_PIN) {

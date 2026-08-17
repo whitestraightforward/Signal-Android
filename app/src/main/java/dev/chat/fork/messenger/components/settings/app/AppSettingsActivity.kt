@@ -116,11 +116,12 @@ class AppSettingsActivity : DSLSettingsActivity(), GooglePayComponent {
 
     SignalStore.settings.onConfigurationSettingChanged.observe(this) { key ->
       if (key == SettingsValues.THEME) {
-        DynamicTheme.setDefaultDayNightMode(this)
-        // Report the configuration change so onWillFinish() returns RESULT_CONFIG_CHANGED and
-        // MainActivity clears its stale toolbar color and recreates with the new theme.
+        // AppCompatDelegate.setDefaultNightMode() will trigger recreation of all
+        // started activities automatically, so we must NOT call recreate() explicitly
+        // to avoid double-recreation and window-focus ANR. We just mark config updated
+        // so MainActivity can clear toolbar color when this activity finishes.
         wasConfigurationUpdated = true
-        recreate()
+        DynamicTheme.setDefaultDayNightMode(this)
       } else if (key == SettingsValues.LANGUAGE) {
         CachedInflater.from(this).clear()
         wasConfigurationUpdated = true
