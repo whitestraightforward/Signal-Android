@@ -42,7 +42,7 @@ class LabsSettingsFragment : ComposeFragment() {
     LabsSettingsContent(
       state = state,
       onEvent = viewModel::onEvent,
-      onNavigationClick = { findNavController().popBackStack() }
+      onNavigationClick = { requireActivity().onBackPressedDispatcher.onBackPressed() }
     )
   }
 }
