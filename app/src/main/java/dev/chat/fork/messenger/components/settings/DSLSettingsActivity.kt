@@ -61,13 +61,14 @@ open class DSLSettingsActivity : PassphraseRequiredActivity() {
   }
 
   override fun onNavigateUp(): Boolean {
-    return if (!Navigation.findNavController(this, R.id.nav_host_fragment).popBackStack()) {
+    val navController = Navigation.findNavController(this, R.id.nav_host_fragment)
+    val popped = navController.popBackStack()
+    if (!popped || navController.currentDestination == null) {
       onWillFinish()
       finish()
-      true
-    } else {
-      false
+      return true
     }
+    return false
   }
 
   private fun enableSettingsEdgeToEdge() {
