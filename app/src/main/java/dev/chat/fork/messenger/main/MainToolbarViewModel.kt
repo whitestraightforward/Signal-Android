@@ -64,6 +64,12 @@ class MainToolbarViewModel : ViewModel() {
     }
   }
 
+  fun clearToolbarColor() {
+    internalStateFlow.update {
+      it.copy(toolbarColor = null)
+    }
+  }
+
   fun setSearchQuery(query: String) {
     internalStateFlow.update {
       it.copy(searchQuery = query)

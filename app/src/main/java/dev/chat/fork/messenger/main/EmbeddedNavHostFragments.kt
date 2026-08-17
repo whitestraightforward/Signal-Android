@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.NavHostFragment
+import dev.chat.fork.messenger.MainNavigator
 import dev.chat.fork.messenger.R
 
 /**
@@ -34,6 +35,15 @@ class EmbeddedSettingsFragment : Fragment() {
       childFragmentManager.beginTransaction()
         .replace(R.id.embedded_nav_host_fragment, navHostFragment)
         .commitNow()
+    }
+
+    // MainActivity suppresses all drawing until a tab reports its first render (see the
+    // OnPreDrawListener in MainActivity.onCreate). The chats/calls/stories tabs report it via
+    // their fragments, but when the activity is (re)created directly on the Settings tab —
+    // e.g. after a theme change triggers RESULT_CONFIG_CHANGED -> recreate() — nothing would
+    // ever unblock drawing, leaving the window black. Report first render once our view is laid out.
+    view.post {
+      (activity as? MainNavigator.NavigatorProvider)?.onFirstRender()
     }
   }
 }
@@ -59,6 +69,12 @@ class EmbeddedProfileFragment : Fragment() {
       childFragmentManager.beginTransaction()
         .replace(R.id.embedded_nav_host_fragment, navHostFragment)
         .commitNow()
+    }
+
+    // Same first-render reporting as EmbeddedSettingsFragment: prevents a black screen when
+    // MainActivity is (re)created directly on the Profile tab.
+    view.post {
+      (activity as? MainNavigator.NavigatorProvider)?.onFirstRender()
     }
   }
 }
