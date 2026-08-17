@@ -192,14 +192,14 @@ class AppSettingsFragment : ComposeFragment(), Callbacks {
   /**
    * Returns whether [route] should open full-screen instead of inside the embedded settings pane.
    * Routes that already open their own activities keep their existing navigation behavior.
-   * Appearance is kept embedded so that the main interface and Settings are displayed in the same
-   * window and Back from Appearance can navigate directly to the main interface, matching Account.
+   * Appearance follows the same pattern as Account: it is opened full-screen inside
+   * AppSettingsActivity where Settings (main list) and Appearance are in the same window,
+   * and Back returns to the previous interface.
    */
   private fun shouldOpenFullScreen(route: AppSettingsRoute): Boolean {
     return requireActivity() is MainActivity &&
       route !is AppSettingsRoute.AccountRoute.ManageProfile &&
-      route !is AppSettingsRoute.Payments &&
-      route !is AppSettingsRoute.AppearanceRoute.Appearance
+      route !is AppSettingsRoute.Payments
   }
 
   override fun onResume() {
