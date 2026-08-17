@@ -375,7 +375,7 @@ private fun PrimaryToolbar(
     ),
     title = {
       Text(
-        text = stringResource(R.string.app_name),
+        text = stringResource(state.destination.label),
         style = MaterialTheme.typography.titleLarge
       )
     },
